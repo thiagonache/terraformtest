@@ -1,7 +1,9 @@
 Initial idea
 
 json file => terraform plan
+
 []resources
+
 resource => go type
 
 Need to be able to specific which values we are interested in.
