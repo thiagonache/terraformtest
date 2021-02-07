@@ -1,0 +1,265 @@
+{
+  "format_version": "0.1",
+  "terraform_version": "0.13.5",
+  "variables": {
+    "job_count": {
+      "value": 2
+    },
+    "job_name": {
+      "value": "unit-test"
+    },
+    "nomad_addr": {
+      "value": "http://127.0.0.1:4646"
+    },
+    "template_name": {
+      "value": "example.nomad.tpl"
+    }
+  },
+  "planned_values": {
+    "root_module": {
+      "child_modules": [
+        {
+          "resources": [
+            {
+              "address": "module.nomad_job.nomad_job.test_job",
+              "mode": "managed",
+              "type": "nomad_job",
+              "name": "test_job",
+              "provider_name": "registry.terraform.io/hashicorp/nomad",
+              "schema_version": 0,
+              "values": {
+                "datacenters": [
+                  "dc1"
+                ],
+                "deregister_on_destroy": true,
+                "deregister_on_id_change": true,
+                "detach": true,
+                "hcl2": [
+                  {
+                    "allow_fs": true,
+                    "enabled": true
+                  }
+                ],
+                "jobspec": "job \"unit-test\" {\n  datacenters = [\"dc1\"]\n  type = \"service\"\n  update {\n    max_parallel = 1\n    min_healthy_time = \"10s\"\n    healthy_deadline = \"3m\"\n    progress_deadline = \"10m\"\n    auto_revert = false\n    canary = 0\n  }\n  migrate {\n    max_parallel = 1\n    health_check = \"checks\"\n    min_healthy_time = \"10s\"\n    healthy_deadline = \"5m\"\n  }\n  group \"cache\" {\n    count = 2\n    network {\n      port \"db\" {\n        to = 6379\n      }\n    }\n    service {\n      name = \"redis-cache\"\n      tags = [\"global\", \"cache\"]\n      port = \"db\"\n    }\n    restart {\n      # The number of attempts to run the job within the specified interval.\n      attempts = 2\n      interval = \"30m\"\n      delay = \"15s\"\n      mode = \"fail\"\n    }\n    ephemeral_disk {\n      size = 10\n    }\n    task \"redis\" {\n      driver = \"docker\"\n      config {\n        image = \"redis:3.2\"\n\n        ports = [\"db\"]\n      }\n      resources {\n        cpu    = 500 # 500 MHz\n        memory = 256 # 256MB\n      }\n    }\n  }\n}\n",
+                "json": null,
+                "name": "unit-test",
+                "namespace": "default",
+                "policy_override": null,
+                "purge_on_destroy": null,
+                "task_groups": [
+                  {
+                    "count": 2,
+                    "name": "cache",
+                    "task": [
+                      {
+                        "driver": "docker",
+                        "name": "redis",
+                        "volume_mounts": null
+                      }
+                    ],
+                    "volumes": null
+                  }
+                ],
+                "type": "service"
+              }
+            }
+          ],
+          "address": "module.nomad_job"
+        }
+      ]
+    }
+  },
+  "resource_changes": [
+    {
+      "address": "module.nomad_job.nomad_job.test_job",
+      "module_address": "module.nomad_job",
+      "mode": "managed",
+      "type": "nomad_job",
+      "name": "test_job",
+      "provider_name": "registry.terraform.io/hashicorp/nomad",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "datacenters": [
+            "dc1"
+          ],
+          "deregister_on_destroy": true,
+          "deregister_on_id_change": true,
+          "detach": true,
+          "hcl2": [
+            {
+              "allow_fs": true,
+              "enabled": true
+            }
+          ],
+          "jobspec": "job \"unit-test\" {\n  datacenters = [\"dc1\"]\n  type = \"service\"\n  update {\n    max_parallel = 1\n    min_healthy_time = \"10s\"\n    healthy_deadline = \"3m\"\n    progress_deadline = \"10m\"\n    auto_revert = false\n    canary = 0\n  }\n  migrate {\n    max_parallel = 1\n    health_check = \"checks\"\n    min_healthy_time = \"10s\"\n    healthy_deadline = \"5m\"\n  }\n  group \"cache\" {\n    count = 2\n    network {\n      port \"db\" {\n        to = 6379\n      }\n    }\n    service {\n      name = \"redis-cache\"\n      tags = [\"global\", \"cache\"]\n      port = \"db\"\n    }\n    restart {\n      # The number of attempts to run the job within the specified interval.\n      attempts = 2\n      interval = \"30m\"\n      delay = \"15s\"\n      mode = \"fail\"\n    }\n    ephemeral_disk {\n      size = 10\n    }\n    task \"redis\" {\n      driver = \"docker\"\n      config {\n        image = \"redis:3.2\"\n\n        ports = [\"db\"]\n      }\n      resources {\n        cpu    = 500 # 500 MHz\n        memory = 256 # 256MB\n      }\n    }\n  }\n}\n",
+          "json": null,
+          "name": "unit-test",
+          "namespace": "default",
+          "policy_override": null,
+          "purge_on_destroy": null,
+          "task_groups": [
+            {
+              "count": 2,
+              "name": "cache",
+              "task": [
+                {
+                  "driver": "docker",
+                  "name": "redis",
+                  "volume_mounts": null
+                }
+              ],
+              "volumes": null
+            }
+          ],
+          "type": "service"
+        },
+        "after_unknown": {
+          "allocation_ids": true,
+          "datacenters": [
+            false
+          ],
+          "deployment_id": true,
+          "deployment_status": true,
+          "hcl2": [
+            {}
+          ],
+          "id": true,
+          "modify_index": true,
+          "region": true,
+          "task_groups": [
+            {
+              "meta": true,
+              "task": [
+                {
+                  "meta": true
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration": {
+    "provider_config": {
+      "module.nomad_job:nomad": {
+        "name": "nomad",
+        "module_address": "module.nomad_job",
+        "expressions": {
+          "address": {
+            "references": [
+              "var.nomad_addr"
+            ]
+          }
+        }
+      },
+      "nomad": {
+        "name": "nomad",
+        "expressions": {
+          "address": {
+            "references": [
+              "var.nomad_addr"
+            ]
+          }
+        }
+      }
+    },
+    "root_module": {
+      "module_calls": {
+        "nomad_job": {
+          "source": "../../",
+          "expressions": {
+            "job_count": {
+              "references": [
+                "var.job_count"
+              ]
+            },
+            "job_name": {
+              "references": [
+                "var.job_name"
+              ]
+            },
+            "nomad_addr": {
+              "references": [
+                "var.nomad_addr"
+              ]
+            },
+            "template_name": {
+              "references": [
+                "var.template_name"
+              ]
+            }
+          },
+          "module": {
+            "resources": [
+              {
+                "address": "nomad_job.test_job",
+                "mode": "managed",
+                "type": "nomad_job",
+                "name": "test_job",
+                "provider_config_key": "nomad_job:nomad",
+                "expressions": {
+                  "hcl2": [
+                    {
+                      "allow_fs": {
+                        "constant_value": true
+                      },
+                      "enabled": {
+                        "constant_value": true
+                      }
+                    }
+                  ],
+                  "jobspec": {
+                    "references": [
+                      "path.module",
+                      "var.template_name",
+                      "var.job_name",
+                      "var.job_count"
+                    ]
+                  }
+                },
+                "schema_version": 0
+              }
+            ],
+            "variables": {
+              "job_count": {
+                "default": 1,
+                "description": "Number of copies to be spawn"
+              },
+              "job_name": {
+                "default": "example",
+                "description": "Name for job being created"
+              },
+              "nomad_addr": {
+                "default": "http://127.0.0.1:4646",
+                "description": "Nomad endpoint to connect to"
+              },
+              "template_name": {
+                "default": "example.nomad.tpl",
+                "description": "Template file inside of templates directory"
+              }
+            }
+          }
+        }
+      },
+      "variables": {
+        "job_count": {
+          "description": "Number of copies to be spawn"
+        },
+        "job_name": {
+          "description": "Name for job being created"
+        },
+        "nomad_addr": {
+          "description": "Nomad endpoint to connect to"
+        },
+        "template_name": {
+          "description": "Template file inside of templates directory"
+        }
+      }
+    }
+  }
+}
