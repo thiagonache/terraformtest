@@ -1,20 +1,27 @@
+Initial idea
+
 json file => terraform plan
 []resources
 resource => go type
 
-be able to specific which values we are interested in.
+Need to be able to specific which values we are interested in.
 
+
+```
 func TestResourceTerraform(t \*t.Testing) {
-want := tfResource{
-type: "nomad_job",
-name: "unit-test",
-count: 2,
-}
+  want := tfResource{
+    type: "nomad_job",
+    name: "unit-test",
+    count: 2,
+  }
 
-    plan, err := planTerraform("dir")
-    if err != nil {}
-    if !plan.Equal(want, got) {
-        fmt.Println(plan.Diff(want,got))
+  plan, err := planTerraform("dir")
+  if err != nil {
+    t.Error(error)
+  }
+  if !plan.Equal(want, got) {
+        t.Error(plan.Diff(want,got))
     }
 
 }
+```
