@@ -2,12 +2,12 @@ package terraformtest
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/savaki/jq"
 )
 
@@ -16,9 +16,14 @@ func CountNumberResources(tfPlan []byte, jqPath string) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("cannot extract data from plan using %q query path", jqPath)
 	}
-	fmt.Println(cmp.Diff(string(tfPlan), "datacenters"))
+	tfResources := make(map[string]interface{})
+	err = json.Unmarshal(tfPlan, &tfResources)
+	if err != nil {
+		return 0, fmt.Errorf("cannot unmarshal extracted plan data: %v", err)
+	}
+	resources := tfResources["resources"].([]interface{})
 
-	return 0, nil
+	return len(resources), nil
 }
 func ExtractPlanData(tfPlan []byte, jqPath string) ([]byte, error) {
 	jqOp, err := jq.Parse(jqPath)

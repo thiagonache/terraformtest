@@ -21,13 +21,13 @@ func TestJSONParse(t *testing.T) {
 func TestNumberResources(t *testing.T) {
 	t.Parallel()
 
-	want := 10
+	want := 2
 
-	tfPlan, err := terraformtest.ParseJSON("terraform.tfplan")
+	tfPlan, err := terraformtest.ParseJSON("terraform.tfplan2")
 	if err != nil {
 		t.Error(err)
 	}
-	got, err := terraformtest.CountNumberResources(tfPlan, ".planned_values.root_module.child_modules.[0]")
+	got, err := terraformtest.CountNumberResources(tfPlan, ".planned_values.root_module")
 	if err != nil {
 		t.Fatal(err)
 	}
