@@ -22,17 +22,30 @@ func TestNumberResources(t *testing.T) {
 	t.Parallel()
 
 	want := 2
-
 	tfPlan, err := terraformtest.ParseJSON("terraform.tfplan2")
 	if err != nil {
 		t.Error(err)
 	}
-	got, err := terraformtest.CountNumberResources(tfPlan, ".planned_values.root_module")
+	got, err := terraformtest.CountNumberResources(tfPlan, ".planned_values.root_module.resources")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if want != got {
 		t.Errorf("want %d, got %d", want, got)
+	}
+}
+
+func TestCompareNomadJob(t *testing.T) {
+	t.Parallel()
+	want := map[string]string{"name": "test_job"}
+
+	tfPlan, err := terraformtest.ParseJSON("terraform.tfplan")
+	if err != nil {
+		t.Error(err)
+	}
+	got, err := terraformtest.ExtractPlanData(tfPlan, ".planned_values.root_module.child_modules.[0].resources.[0]")
+	if !terraformtest.Equal(want, got) {
+		t.Fatal("not equal")
 	}
 }

@@ -8,7 +8,6 @@ resource => go type
 
 Need to be able to specific which values we are interested in.
 
-
 ```
 func TestResourceTerraform(t \*t.Testing) {
   want := tfResource{
