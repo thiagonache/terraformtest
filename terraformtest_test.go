@@ -36,16 +36,44 @@ func TestNumberResources(t *testing.T) {
 	}
 }
 
-func TestCompareNomadJob(t *testing.T) {
+func TestCompareResourceType(t *testing.T) {
 	t.Parallel()
-	want := map[string]string{"name": "test_job"}
+	//want := map[string]string{"name": "test_job"}
 
 	tfPlan, err := terraformtest.ParseJSON("terraform.tfplan")
 	if err != nil {
 		t.Error(err)
 	}
 	got, err := terraformtest.ExtractPlanData(tfPlan, ".planned_values.root_module.child_modules.[0].resources.[0]")
-	if !terraformtest.Equal(want, got) {
+	if !terraformtest.Equal("type", "nomad_job", got) {
+		t.Fatal("not equal")
+	}
+}
+
+func TestCompareResourceName(t *testing.T) {
+	t.Parallel()
+	//want := map[string]string{"name": "test_job"}
+
+	tfPlan, err := terraformtest.ParseJSON("terraform.tfplan")
+	if err != nil {
+		t.Error(err)
+	}
+	got, err := terraformtest.ExtractPlanData(tfPlan, ".planned_values.root_module.child_modules.[0].resources.[0]")
+	if !terraformtest.Equal("name", "test_job", got) {
+		t.Fatal("not equal")
+	}
+}
+
+func TestCompareNomadJobName(t *testing.T) {
+	t.Parallel()
+	//want := map[string]string{"name": "test_job"}
+
+	tfPlan, err := terraformtest.ParseJSON("terraform.tfplan")
+	if err != nil {
+		t.Error(err)
+	}
+	got, err := terraformtest.ExtractPlanData(tfPlan, ".planned_values.root_module.child_modules.[0].resources.[0].values")
+	if !terraformtest.Equal("name", "unit-test", got) {
 		t.Fatal("not equal")
 	}
 }

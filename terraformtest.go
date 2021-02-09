@@ -18,20 +18,32 @@ type TFPlan struct {
 
 type TFResource []map[string]interface{}
 
-func Equal(tfResource map[string]string, tfResources []byte) bool {
-	fmt.Println(string(tfResources))
-	tfResourcesJSON := make(map[string]interface{}, 0)
-	err := json.Unmarshal(tfResources, &tfResourcesJSON)
+// Should I use strings.TrimFunc?
+func removeQuotesString(s string) string {
+	if len(s) > 0 && s[0] == '"' {
+		s = s[1:]
+	}
+	if len(s) > 0 && s[len(s)-1] == '"' {
+		s = s[:len(s)-1]
+	}
+
+	return s
+}
+
+func Equal(tfResourceKey, tfResourceValue string, tfResources []byte) bool {
+	data, err := ExtractPlanData(tfResources, tfResourceKey)
 	if err != nil {
-		fmt.Println("cannot unmarshall tfResources into a slice of map of string and empty interface")
+		fmt.Printf("cannot extract %s from JSON with resources", tfResourceKey)
 		return false
 	}
-	for k, v := range tfResource {
-		jsonValue := tfResourcesJSON[k].(string)
-		if v != jsonValue {
-			return false
-		}
-	}
+	value := removeQuotesString(string(data))
+	return value == tfResourceValue
+	// for k, v := range tfResource {
+	// 	jsonValue := tfResourcesJSON[k].(string)
+	// 	if v != jsonValue {
+	// 		return false
+	// 	}
+	// }
 	// for _, i := range tfResourcesJSON {
 	// 	for k, v := range i {
 	// 		fmt.Println("Key:", k, "Value:", v)
