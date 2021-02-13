@@ -9,16 +9,19 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+// TFPlan is the raw bytes of the terraform plan file
 type TFPlan struct {
 	Data []byte
 }
 
+// TFResource is the respresentation of the terraform resource
 type TFResource struct {
 	Metadata map[string]string
 	Total    int
 	Values   map[string]string
 }
 
+// Equal verify if terraform resource is in the terraform plan
 func Equal(tfResource TFResource, tfPlan TFPlan) bool {
 	rootModuleResources := gjson.GetBytes(tfPlan.Data, "planned_values.root_module.resources")
 	childModulesResources := gjson.GetBytes(tfPlan.Data, "planned_values.root_module.child_modules.#.resources")
@@ -56,7 +59,8 @@ func Equal(tfResource TFResource, tfPlan TFPlan) bool {
 	return true
 }
 
-func ReadTfPlan(path string) (TFPlan, error) {
+// ReadPlanFile reads the terraform plan file
+func ReadPlanFile(path string) (TFPlan, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return TFPlan{}, fmt.Errorf("cannot open file: %s", path)

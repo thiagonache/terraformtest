@@ -5,16 +5,15 @@ import (
 	"testing"
 )
 
-func TestReadTfPlan(t *testing.T) {
+func TestReadPlanFile(t *testing.T) {
 	t.Parallel()
-
-	wantBiggerThan := 2000
-	tfPlan, err := terraformtest.ReadTfPlan("terraform.tfplan")
+	want := 2000
+	tfPlan, err := terraformtest.ReadPlanFile("terraform.tfplan")
 	if err != nil {
 		t.Error(err)
 	}
-	if wantBiggerThan >= len(tfPlan.Data) {
-		t.Errorf("want json minimum size in bytes of %d but got %d", wantBiggerThan, len(tfPlan.Data))
+	if want >= len(tfPlan.Data) {
+		t.Errorf("want json minimum size in bytes of %d but got %d", want, len(tfPlan.Data))
 	}
 }
 
@@ -32,7 +31,7 @@ func TestEqual(t *testing.T) {
 			"datacenters.0": "dc1",
 		},
 	}
-	got, err := terraformtest.ReadTfPlan("terraform.tfplan")
+	got, err := terraformtest.ReadPlanFile("terraform.tfplan")
 	if err != nil {
 		t.Fatalf("cannot read terraform plan: %v", err)
 	}
