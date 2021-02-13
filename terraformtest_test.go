@@ -10,7 +10,7 @@ func TestReadPlanFile(t *testing.T) {
 	want := 2000
 	tfPlan, err := terraformtest.ReadPlanFile("terraform.tfplan")
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if want >= len(tfPlan.Data) {
 		t.Errorf("want json minimum size in bytes of %d but got %d", want, len(tfPlan.Data))
