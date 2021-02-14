@@ -7,9 +7,9 @@ import (
 
 func TestReadPlanFile(t *testing.T) {
 	t.Parallel()
-  
+
 	want := 9028
-	tfPlan, err := terraformtest.ReadTfPlan("testdata/terraform.tfplan")
+	tfPlan, err := terraformtest.ReadPlanFile("testdata/terraform.tfplan")
 
 	if err != nil {
 		t.Fatal(err)
@@ -31,7 +31,7 @@ func TestEqual(t *testing.T) {
 			"0.0.values.datacenters.0": "dc1",
 		},
 	}
-	got, err := terraformtest.ReadTfPlan("testdata/terraform.tfplan")
+	got, err := terraformtest.ReadPlanFile("testdata/terraform.tfplan")
 	if err != nil {
 		t.Fatalf("cannot read terraform plan: %v", err)
 	}
@@ -56,7 +56,7 @@ func TestTFAWS101NatEIPOne(t *testing.T) {
 		},
 	}
 
-	got, err := terraformtest.ReadTfPlan("testdata/terraform-aws-101.tfplan.json")
+	got, err := terraformtest.ReadPlanFile("testdata/terraform-aws-101.tfplan.json")
 	if err != nil {
 		t.Fatalf("cannot read terraform plan: %v", err)
 	}
@@ -81,7 +81,7 @@ func TestTFAWS101DBOptionGroup(t *testing.T) {
 		},
 	}
 
-	got, err := terraformtest.ReadTfPlan("testdata/terraform-aws-101.tfplan.json")
+	got, err := terraformtest.ReadPlanFile("testdata/terraform-aws-101.tfplan.json")
 	if err != nil {
 		t.Fatalf("cannot read terraform plan: %v", err)
 	}
