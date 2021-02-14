@@ -3,13 +3,14 @@ package terraformtest_test
 import (
 	"terraformtest"
 	"testing"
+	"testdata/terraform.tfplan"
 )
 
 func TestReadTfPlan(t *testing.T) {
 	t.Parallel()
 
 	wantBiggerThan := 2000
-	tfPlan, err := terraformtest.ReadTfPlan("testdata/terraform.tfplan")
+	tfPlan, err := terraformtest.ReadTfPlan("terraform.tfplan")
 	if err != nil {
 		t.Error(err)
 	}
@@ -32,7 +33,7 @@ func TestEqual(t *testing.T) {
 			"datacenters.0": "dc1",
 		},
 	}
-	got, err := terraformtest.ReadTfPlan("testdata/terraform.tfplan")
+	got, err := terraformtest.ReadTfPlan("terraform.tfplan")
 	if err != nil {
 		t.Fatalf("cannot read terraform plan: %v", err)
 	}
