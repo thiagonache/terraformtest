@@ -9,7 +9,7 @@ func TestReadTfPlan(t *testing.T) {
 	t.Parallel()
 
 	wantBiggerThan := 2000
-	tfPlan, err := terraformtest.ReadTfPlan("terraform.tfplan")
+	tfPlan, err := terraformtest.ReadTfPlan("testdata/terraform.tfplan")
 	if err != nil {
 		t.Error(err)
 	}
@@ -32,7 +32,7 @@ func TestEqual(t *testing.T) {
 			"datacenters.0": "dc1",
 		},
 	}
-	got, err := terraformtest.ReadTfPlan("terraform.tfplan")
+	got, err := terraformtest.ReadTfPlan("testdata/terraform.tfplan")
 	if err != nil {
 		t.Fatalf("cannot read terraform plan: %v", err)
 	}
