@@ -11,25 +11,27 @@ are strings.
 
 ```
   want := terraformtest.TFResource{
-    Metadata: map[string]string{
-      "name": "test_job",
-      "type": "nomad_job",
-    },
-    Total: 1,
-    Values: map[string]string{
-      "name":          "unit-test",
-      "datacenters.0": "dc1",
-    },
-  }
+		Filter: `planned_values.root_module.child_modules.#.resources`,
+		Check: map[string]string{
+			"0.0.address":              "module.nomad_job.nomad_job.test_job",
+			"0.0.type":                 "nomad_job",
+			"0.0.values.name":          "unit-test",
+			"0.0.values.datacenters.0": "dc1",
+		},
+	}
 ```
 
-If we would have a second datacenter we would add one more line inside of Values
-field.
+If we would have a second datacenter we would add one more line.
 
 ```
-    Values: map[string]string{
-      "name":          "unit-test",
-      "datacenters.0": "dc1",
-      "datacenters.1": "dc2",
-    },
+  want := terraformtest.TFResource{
+		Filter: `planned_values.root_module.child_modules.#.resources`,
+		Check: map[string]string{
+			"0.0.address":              "module.nomad_job.nomad_job.test_job",
+			"0.0.type":                 "nomad_job",
+			"0.0.values.name":          "unit-test",
+			"0.0.values.datacenters.0": "dc1",
+      "0.0.values.datacenters.1": "dc2",
+		},
+	}
 ```
