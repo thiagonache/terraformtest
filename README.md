@@ -1,3 +1,7 @@
+![Go](https://github.com/thiagonache/terraformtest/workflows/Go/badge.svg?branch=master)
+[![Go Report Card](https://goreportcard.com/badge/github.com/thiagonache/terraformtest)](https://goreportcard.com/report/github.com/thiagonache/terraformtest)
+
+
 # Unit testing terraform (WIP)
 
 ## Disclaimer
