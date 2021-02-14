@@ -11,27 +11,27 @@ are strings.
 
 ```
   want := terraformtest.TFResource{
-		Filter: `planned_values.root_module.child_modules.#.resources`,
-		Check: map[string]string{
-			"0.0.address":              "module.nomad_job.nomad_job.test_job",
-			"0.0.type":                 "nomad_job",
-			"0.0.values.name":          "unit-test",
-			"0.0.values.datacenters.0": "dc1",
-		},
-	}
+    Filter: `planned_values.root_module.child_modules.#.resources`,
+    Check: map[string]string{
+      "0.0.address":              "module.nomad_job.nomad_job.test_job",
+      "0.0.type":                 "nomad_job",
+      "0.0.values.name":          "unit-test",
+      "0.0.values.datacenters.0": "dc1",
+    },
+  }
 ```
 
 If we would have a second datacenter we would add one more line.
 
 ```
   want := terraformtest.TFResource{
-		Filter: `planned_values.root_module.child_modules.#.resources`,
-		Check: map[string]string{
-			"0.0.address":              "module.nomad_job.nomad_job.test_job",
-			"0.0.type":                 "nomad_job",
-			"0.0.values.name":          "unit-test",
-			"0.0.values.datacenters.0": "dc1",
+    Filter: `planned_values.root_module.child_modules.#.resources`,
+    Check: map[string]string{
+      "0.0.address":              "module.nomad_job.nomad_job.test_job",
+      "0.0.type":                 "nomad_job",
+      "0.0.values.name":          "unit-test",
+      "0.0.values.datacenters.0": "dc1",
       "0.0.values.datacenters.1": "dc2",
-		},
-	}
+    },
+  }
 ```
