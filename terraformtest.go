@@ -9,6 +9,7 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+// TFPlan is a struct containing the terraform plan data
 type TFPlan struct {
 	Data []byte
 }
@@ -64,7 +65,8 @@ func OutputDiff(tfDiff TFDiff) string {
 	return stringDiff
 }
 
-func ReadTfPlan(path string) (TFPlan, error) {
+// ReadPlanFile reads the terraform plan file
+func ReadPlanFile(path string) (TFPlan, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return TFPlan{}, fmt.Errorf("cannot open file: %s", path)
