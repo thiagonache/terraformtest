@@ -14,7 +14,7 @@ type TFPlan struct {
 	Data []byte
 }
 
-// TFResource is the respresentation of the terraform resource
+// TFResource is a struct representation of the terraform resource
 type TFResource struct {
 	Metadata map[string]string
 	Total    int
