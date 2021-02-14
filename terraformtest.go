@@ -14,19 +14,24 @@ type TFPlan struct {
 	Data []byte
 }
 
+// TFDiff is a struct containing slice of TFDiffItem
 type TFDiff struct {
 	Items []TFDiffItem
 }
 
+// TFDiffItem is a struct containing got, key and want values for the diff
 type TFDiffItem struct {
 	Got, Key, Want string
 }
 
+// TFResource is a struct with values to be checked and JSON query filter
 type TFResource struct {
 	Check  map[string]string
 	Filter string
 }
 
+// Equal evaluate TFPlan and TFResource and returns the diff and if it is equal
+// or not.
 func Equal(tfResource TFResource, tfPlan TFPlan) (TFDiff, bool) {
 	returnValue := true
 	tfDiff := TFDiff{}
@@ -57,6 +62,7 @@ func Equal(tfResource TFResource, tfPlan TFPlan) (TFDiff, bool) {
 	return tfDiff, returnValue
 }
 
+// OutputDiff prints out all diffs in a string concanated by new line
 func OutputDiff(tfDiff TFDiff) string {
 	var stringDiff string
 	for _, diff := range tfDiff.Items {
