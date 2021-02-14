@@ -3,7 +3,6 @@ package terraformtest_test
 import (
 	"terraformtest"
 	"testing"
-	"testdata"
 )
 
 func TestReadTfPlan(t *testing.T) {
