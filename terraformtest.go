@@ -13,47 +13,55 @@ type TFPlan struct {
 	Data []byte
 }
 
-type TFResource struct {
-	Metadata map[string]string
-	Total    int
-	Values   map[string]string
+type TFDiff struct {
+	Items []TFDiffItem
 }
 
-func Equal(tfResource TFResource, tfPlan TFPlan) bool {
-	rootModuleResources := gjson.GetBytes(tfPlan.Data, "planned_values.root_module.resources")
-	childModulesResources := gjson.GetBytes(tfPlan.Data, "planned_values.root_module.child_modules.#.resources")
-	if tfResource.Total > 0 {
-		if tfResource.Total != len(rootModuleResources.Array())+len(childModulesResources.Array()) {
-			return false
+type TFDiffItem struct {
+	Got, Key, Want string
+}
+
+type TFResource struct {
+	Check  map[string]string
+	Filter string
+}
+
+func Equal(tfResource TFResource, tfPlan TFPlan) (TFDiff, bool) {
+	returnValue := true
+	tfDiff := TFDiff{}
+	resources := gjson.GetBytes(tfPlan.Data, tfResource.Filter)
+	for k, v := range tfResource.Check {
+		value := gjson.GetBytes([]byte(resources.Raw), k)
+		if !value.Exists() {
+			tfDiffItem := TFDiffItem{
+				Got:  "",
+				Key:  k,
+				Want: v,
+			}
+			tfDiff.Items = append(tfDiff.Items, tfDiffItem)
+			returnValue = false
+			continue
+		}
+		if value.String() != v {
+			tfDiffItem := TFDiffItem{
+				Got:  value.String(),
+				Key:  k,
+				Want: v,
+			}
+			tfDiff.Items = append(tfDiff.Items, tfDiffItem)
+			returnValue = false
 		}
 	}
 
-	for k, v := range tfResource.Metadata {
-		value := gjson.GetBytes([]byte(rootModuleResources.Raw), fmt.Sprintf("0.0.%s", k))
-		if !value.Exists() {
-			value = gjson.GetBytes([]byte(childModulesResources.Raw), fmt.Sprintf("0.0.%s", k))
-			if !value.Exists() {
-				return false
-			}
-		}
-		if value.String() != v {
-			return false
-		}
-	}
+	return tfDiff, returnValue
+}
 
-	for k, v := range tfResource.Values {
-		value := gjson.GetBytes([]byte(rootModuleResources.Raw), fmt.Sprintf("0.0.values.%s", k))
-		if !value.Exists() {
-			value = gjson.GetBytes([]byte(childModulesResources.Raw), fmt.Sprintf("0.0.values.%s", k))
-			if !value.Exists() {
-				return false
-			}
-		}
-		if value.String() != v {
-			return false
-		}
+func OutputDiff(tfDiff TFDiff) string {
+	var stringDiff string
+	for _, diff := range tfDiff.Items {
+		stringDiff += fmt.Sprintf("key %q: want %q, got %q\n", diff.Key, diff.Want, diff.Got)
 	}
-	return true
+	return stringDiff
 }
 
 func ReadTfPlan(path string) (TFPlan, error) {
