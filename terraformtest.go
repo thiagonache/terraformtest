@@ -9,7 +9,7 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-// TFPlan is the raw bytes of the terraform plan file
+// TFPlan is a struct containing the terraform plan data
 type TFPlan struct {
 	Data []byte
 }
