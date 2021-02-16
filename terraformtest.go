@@ -11,7 +11,10 @@ import (
 
 // TFPlan is a struct containing the terraform plan data
 type TFPlan struct {
-	Data []byte
+	CurItemIndex string
+	Data         []byte
+	Items        map[string]map[string]gjson.Result
+	MaxDepth     int
 }
 
 // TFDiff is a struct containing slice of TFDiffItem
@@ -83,7 +86,8 @@ func ReadPlanFile(path string) (TFPlan, error) {
 		return TFPlan{}, fmt.Errorf("cannot read data from IO Reader: %v", err)
 	}
 	TFPlan := TFPlan{
-		Data: tfplan,
+		Data:     tfplan,
+		MaxDepth: 10,
 	}
 	return TFPlan, nil
 
