@@ -3,6 +3,9 @@ package terraformtest_test
 import (
 	"terraformtest"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/tidwall/gjson"
 )
 
 func TestReadPlanFile(t *testing.T) {
@@ -19,10 +22,53 @@ func TestReadPlanFile(t *testing.T) {
 	}
 }
 
+func TestCoalescePlan(t *testing.T) {
+	t.Parallel()
+	tfPlan := terraformtest.TFPlan{
+		MaxDepth: 10,
+	}
+	want := make(map[string]map[string]gjson.Result)
+	want["abc"] = make(map[string]gjson.Result)
+	want["abc"]["name"] = gjson.Result{
+		Type:  gjson.String,
+		Raw:   `"bogus"`,
+		Str:   "bogus",
+		Num:   0,
+		Index: 0,
+	}
+
+	data := []byte(`{
+		"planned_values": {
+		  "root_module": {
+			"child_modules": [
+			  {
+				"resources": [
+				  {
+					"address": "abc",
+					"name": "bogus"
+				  }
+				],
+				"address": "module.my_module"
+			  }
+			]
+		  }
+		}
+	  }
+	  `)
+	rootModule := gjson.GetBytes(data, `planned_values.root_module`)
+	for k, v := range rootModule.Map() {
+		terraformtest.CoalescePlan(&tfPlan, k, v, 0)
+	}
+	got := tfPlan.Items
+	if !cmp.Equal(want, got) {
+		t.Errorf(cmp.Diff(want, got))
+	}
+
+}
 func TestEqual(t *testing.T) {
 	t.Parallel()
 
-	want := terraformtest.TFResource{
+	want := terraformtest.TFTestResource{
 		Filter: `planned_values.root_module.child_modules.#.resources`,
 		Check: map[string]string{
 			"0.0.address":              "module.nomad_job.nomad_job.test_job",
@@ -38,14 +84,14 @@ func TestEqual(t *testing.T) {
 
 	tfDiff, equal := terraformtest.Equal(want, got)
 	if !equal {
-		t.Error(terraformtest.OutputDiff(tfDiff))
+		t.Error(terraformtest.Diff(tfDiff))
 	}
 }
 
 func TestTFAWS101NatEIPOne(t *testing.T) {
 	t.Parallel()
 
-	want := terraformtest.TFResource{
+	want := terraformtest.TFTestResource{
 		Filter: `planned_values.root_module.child_modules.#.resources`,
 		Check: map[string]string{
 			"0.0.address":               "module.vpc.aws_eip.nat[0]",
@@ -63,14 +109,14 @@ func TestTFAWS101NatEIPOne(t *testing.T) {
 
 	tfDiff, equal := terraformtest.Equal(want, got)
 	if !equal {
-		t.Error(terraformtest.OutputDiff(tfDiff))
+		t.Error(terraformtest.Diff(tfDiff))
 	}
 }
 
 func TestTFAWS101DBOptionGroup(t *testing.T) {
 	t.Parallel()
 
-	want := terraformtest.TFResource{
+	want := terraformtest.TFTestResource{
 		Filter: `planned_values.root_module.child_modules.#.child_modules.#.resources`,
 		Check: map[string]string{
 			"0.0.0.address":                     "module.db.module.db_option_group.aws_db_option_group.this[0]",
@@ -88,6 +134,6 @@ func TestTFAWS101DBOptionGroup(t *testing.T) {
 
 	tfDiff, equal := terraformtest.Equal(want, got)
 	if !equal {
-		t.Error(terraformtest.OutputDiff(tfDiff))
+		t.Error(terraformtest.Diff(tfDiff))
 	}
 }

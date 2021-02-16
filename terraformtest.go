@@ -27,19 +27,53 @@ type TFDiffItem struct {
 	Got, Key, Want string
 }
 
-// TFResource is a struct with values to be checked and JSON query filter
-type TFResource struct {
+// TFTestResource is a struct with values to be checked and JSON query filter
+type TFTestResource struct {
 	Check  map[string]string
 	Filter string
 }
 
-// Equal evaluate TFPlan and TFResource and returns the diff and if it is equal
+// CoalescePlan transform the multi level json into one big object to make queries easier
+func CoalescePlan(tfPlan *TFPlan, key string, value gjson.Result, depth int) bool {
+	depth++
+	if depth > tfPlan.MaxDepth {
+		return false
+	}
+
+	switch key {
+	case "resources":
+		for _, child := range value.Array() {
+			for k, v := range child.Map() {
+				CoalescePlan(tfPlan, k, v, depth)
+			}
+		}
+	case "child_modules":
+		for _, child := range value.Array() {
+			for k, v := range child.Map() {
+				CoalescePlan(tfPlan, k, v, depth)
+			}
+		}
+	default:
+		if key == "address" {
+			tfPlan.CurItemIndex = value.String()
+			break
+		}
+		item := make(map[string]map[string]gjson.Result)
+		item[tfPlan.CurItemIndex] = make(map[string]gjson.Result)
+		item[tfPlan.CurItemIndex][key] = value
+		tfPlan.Items = item
+	}
+
+	return true
+}
+
+// Equal evaluate TFPlan and TFTestResource and returns the diff and if it is equal
 // or not.
-func Equal(tfResource TFResource, tfPlan TFPlan) (TFDiff, bool) {
+func Equal(tfTestResource TFTestResource, tfPlan TFPlan) (TFDiff, bool) {
 	returnValue := true
 	tfDiff := TFDiff{}
-	resources := gjson.GetBytes(tfPlan.Data, tfResource.Filter)
-	for k, v := range tfResource.Check {
+	resources := gjson.GetBytes(tfPlan.Data, tfTestResource.Filter)
+	for k, v := range tfTestResource.Check {
 		value := gjson.GetBytes([]byte(resources.Raw), k)
 		if !value.Exists() {
 			tfDiffItem := TFDiffItem{
@@ -65,8 +99,8 @@ func Equal(tfResource TFResource, tfPlan TFPlan) (TFDiff, bool) {
 	return tfDiff, returnValue
 }
 
-// OutputDiff prints out all diffs in a string concanated by new line
-func OutputDiff(tfDiff TFDiff) string {
+// Diff returns all diffs in a string concanated by new line
+func Diff(tfDiff TFDiff) string {
 	var stringDiff string
 	for _, diff := range tfDiff.Items {
 		stringDiff += fmt.Sprintf("key %q: want %q, got %q\n", diff.Key, diff.Want, diff.Got)
