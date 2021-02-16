@@ -44,8 +44,8 @@ func TestCoalescePlan(t *testing.T) {
 			  {
 				"resources": [
 				  {
-					"address": "abc",
 					"name": "bogus"
+					"address": "abc",
 				  }
 				],
 				"address": "module.my_module"
@@ -55,7 +55,7 @@ func TestCoalescePlan(t *testing.T) {
 		}
 	  }
 	  `)
-	rootModule := gjson.GetBytes(data, `planned_values.root_module`)
+	rootModule := gjson.GetBytes(data, `planned_values.root_module|@pretty:{"sortKeys":true}`)
 	for k, v := range rootModule.Map() {
 		terraformtest.CoalescePlan(&tfPlan, k, v)
 	}
