@@ -12,11 +12,11 @@ func TestReadPlanFile(t *testing.T) {
 	t.Parallel()
 
 	want := 9028
-	tfPlan, err := terraformtest.ReadPlanFile("testdata/terraform.tfplan")
-
+	tfPlan, err := terraformtest.NewTerraformTest("testdata/terraform.tfplan")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if want != len(tfPlan.Data) {
 		t.Errorf("want json size in bytes of %d but got %d", want, len(tfPlan.Data))
 	}
@@ -74,15 +74,15 @@ func TestEqual(t *testing.T) {
 			"0.0.address":              "module.nomad_job.nomad_job.test_job",
 			"0.0.type":                 "nomad_job",
 			"0.0.values.name":          "unit-test",
-			"0.0.values.datacenters.0": "dc1",
+			"0.0.values.datacenters.0": "dc11",
 		},
 	}
-	got, err := terraformtest.ReadPlanFile("testdata/terraform.tfplan")
+	got, err := terraformtest.NewTerraformTest("testdata/terraform.tfplan")
 	if err != nil {
 		t.Fatalf("cannot read terraform plan: %v", err)
 	}
 
-	tfDiff, equal := terraformtest.Equal(want, got)
+	tfDiff, equal := terraformtest.Equal(want, *got)
 	if !equal {
 		t.Error(terraformtest.Diff(tfDiff))
 	}
@@ -102,12 +102,12 @@ func TestTFAWS101NatEIPOne(t *testing.T) {
 		},
 	}
 
-	got, err := terraformtest.ReadPlanFile("testdata/terraform-aws-101.tfplan.json")
+	got, err := terraformtest.NewTerraformTest("testdata/terraform-aws-101.tfplan.json")
 	if err != nil {
 		t.Fatalf("cannot read terraform plan: %v", err)
 	}
 
-	tfDiff, equal := terraformtest.Equal(want, got)
+	tfDiff, equal := terraformtest.Equal(want, *got)
 	if !equal {
 		t.Error(terraformtest.Diff(tfDiff))
 	}
@@ -127,12 +127,12 @@ func TestTFAWS101DBOptionGroup(t *testing.T) {
 		},
 	}
 
-	got, err := terraformtest.ReadPlanFile("testdata/terraform-aws-101.tfplan.json")
+	got, err := terraformtest.NewTerraformTest("testdata/terraform-aws-101.tfplan.json")
 	if err != nil {
 		t.Fatalf("cannot read terraform plan: %v", err)
 	}
 
-	tfDiff, equal := terraformtest.Equal(want, got)
+	tfDiff, equal := terraformtest.Equal(want, *got)
 	if !equal {
 		t.Error(terraformtest.Diff(tfDiff))
 	}

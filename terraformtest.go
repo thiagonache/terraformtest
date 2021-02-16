@@ -33,6 +33,30 @@ type TFTestResource struct {
 	Filter string
 }
 
+// NewTerraformTest instantiate a new TFPlan object and returns a pointer to it.
+func NewTerraformTest(planPath string) (*TFPlan, error) {
+	tfp := &TFPlan{
+		CurItemIndex: "",
+		Data:         []byte{},
+		Items:        map[string]map[string]gjson.Result{},
+		MaxDepth:     10,
+	}
+
+	f, err := os.Open(planPath)
+	if err != nil {
+		return tfp, fmt.Errorf("cannot open file: %s", planPath)
+	}
+	reader := bufio.NewReader(f)
+	plan, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return tfp, fmt.Errorf("cannot read data from IO Reader: %v", err)
+	}
+
+	tfp.Data = plan
+
+	return tfp, nil
+}
+
 // CoalescePlan transform the multi level json into one big object to make queries easier
 func CoalescePlan(tfPlan *TFPlan, key string, value gjson.Result, depth int) bool {
 	depth++
@@ -106,23 +130,4 @@ func Diff(tfDiff TFDiff) string {
 		stringDiff += fmt.Sprintf("key %q: want %q, got %q\n", diff.Key, diff.Want, diff.Got)
 	}
 	return stringDiff
-}
-
-// ReadPlanFile reads the terraform plan file
-func ReadPlanFile(path string) (TFPlan, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return TFPlan{}, fmt.Errorf("cannot open file: %s", path)
-	}
-	reader := bufio.NewReader(f)
-	tfplan, err := ioutil.ReadAll(reader)
-	if err != nil {
-		return TFPlan{}, fmt.Errorf("cannot read data from IO Reader: %v", err)
-	}
-	TFPlan := TFPlan{
-		Data:     tfplan,
-		MaxDepth: 10,
-	}
-	return TFPlan, nil
-
 }
