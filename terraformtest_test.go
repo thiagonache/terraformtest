@@ -74,7 +74,7 @@ func TestEqual(t *testing.T) {
 			"0.0.address":              "module.nomad_job.nomad_job.test_job",
 			"0.0.type":                 "nomad_job",
 			"0.0.values.name":          "unit-test",
-			"0.0.values.datacenters.0": "dc11",
+			"0.0.values.datacenters.0": "dc1",
 		},
 	}
 	got, err := terraformtest.NewTerraformTest("testdata/terraform.tfplan")
