@@ -11,10 +11,10 @@ import (
 
 // TFPlan is a struct containing the terraform plan data
 type TFPlan struct {
-	CurItemIndex string
-	Data         []byte
-	Items        map[string]map[string]gjson.Result
-	MaxDepth     int
+	CurDepth, MaxDepth int
+	CurItemIndex       string
+	Data               []byte
+	Items              map[string]map[string]gjson.Result
 }
 
 // TFDiff is a struct containing slice of TFDiffItem
@@ -58,9 +58,9 @@ func NewTerraformTest(planPath string) (*TFPlan, error) {
 }
 
 // CoalescePlan transform the multi level json into one big object to make queries easier
-func CoalescePlan(tfPlan *TFPlan, key string, value gjson.Result, depth int) bool {
-	depth++
-	if depth > tfPlan.MaxDepth {
+func CoalescePlan(tfPlan *TFPlan, key string, value gjson.Result) bool {
+	tfPlan.CurDepth++
+	if tfPlan.CurDepth > tfPlan.MaxDepth {
 		return false
 	}
 
@@ -68,13 +68,13 @@ func CoalescePlan(tfPlan *TFPlan, key string, value gjson.Result, depth int) boo
 	case "resources":
 		for _, child := range value.Array() {
 			for k, v := range child.Map() {
-				CoalescePlan(tfPlan, k, v, depth)
+				CoalescePlan(tfPlan, k, v)
 			}
 		}
 	case "child_modules":
 		for _, child := range value.Array() {
 			for k, v := range child.Map() {
-				CoalescePlan(tfPlan, k, v, depth)
+				CoalescePlan(tfPlan, k, v)
 			}
 		}
 	default:

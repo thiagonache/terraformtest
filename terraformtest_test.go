@@ -57,7 +57,7 @@ func TestCoalescePlan(t *testing.T) {
 	  `)
 	rootModule := gjson.GetBytes(data, `planned_values.root_module`)
 	for k, v := range rootModule.Map() {
-		terraformtest.CoalescePlan(&tfPlan, k, v, 0)
+		terraformtest.CoalescePlan(&tfPlan, k, v)
 	}
 	got := tfPlan.Items
 	if !cmp.Equal(want, got) {
