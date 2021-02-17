@@ -83,7 +83,6 @@ func TestEqual(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot run NewTerraformTest function: %v", err)
 	}
-	got.Coalesce()
 
 	tfDiff, equal := terraformtest.Equal(want, *got)
 	if !equal {
@@ -109,7 +108,6 @@ func TestTFAWS101NatEIPOne(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot read terraform plan: %v", err)
 	}
-	got.Coalesce()
 
 	tfDiff, equal := terraformtest.Equal(want, *got)
 	if !equal {
@@ -135,7 +133,6 @@ func TestTFAWS101DBOptionGroup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot read terraform plan: %v", err)
 	}
-	got.Coalesce()
 
 	tfDiff, equal := terraformtest.Equal(want, *got)
 	if !equal {
