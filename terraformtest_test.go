@@ -60,6 +60,7 @@ func TestCoalescePlan(t *testing.T) {
 	  `)
 	tfPlan.Data = data
 	tfPlan.Coalesce()
+
 	got := tfPlan.Items
 	if !cmp.Equal(want, got) {
 		t.Errorf(cmp.Diff(want, got))
