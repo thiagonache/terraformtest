@@ -29,8 +29,9 @@ type TFDiffItem struct {
 
 // TFTestResource is a struct with values to be checked and JSON query filter
 type TFTestResource struct {
-	Check  map[string]string
-	Filter string
+	Address  string
+	Metadata map[string]string
+	Values   map[string]string
 }
 
 // NewTerraformTest instantiate a new TFPlan object and returns a pointer to it.
@@ -39,7 +40,7 @@ func NewTerraformTest(planPath string) (*TFPlan, error) {
 		CurItemIndex: "",
 		Data:         []byte{},
 		Items:        map[string]map[string]gjson.Result{},
-		MaxDepth:     10,
+		MaxDepth:     1000,
 	}
 
 	f, err := os.Open(planPath)
@@ -53,39 +54,41 @@ func NewTerraformTest(planPath string) (*TFPlan, error) {
 	}
 
 	tfp.Data = plan
+	tfp.Coalesce()
 
 	return tfp, nil
 }
 
-// CoalescePlan transform the multi level json into one big object to make queries easier
-func CoalescePlan(tfPlan *TFPlan, key string, value gjson.Result) bool {
+// Coalesce transform the multi level json into one big object to make queries easier
+func (tfPlan *TFPlan) Coalesce() {
+	rootModule := gjson.GetBytes(tfPlan.Data, `planned_values.root_module|@pretty:{"sortKeys":true}`)
+	rootModule.ForEach(tfPlan.coalescePlan)
+}
+
+func (tfPlan *TFPlan) coalescePlan(key, value gjson.Result) bool {
 	tfPlan.CurDepth++
 	if tfPlan.CurDepth > tfPlan.MaxDepth {
+		fmt.Println("MaxDepth reached")
 		return false
 	}
 
-	switch key {
+	switch key.String() {
 	case "resources":
 		for _, child := range value.Array() {
-			for k, v := range child.Map() {
-				CoalescePlan(tfPlan, k, v)
-			}
+			child.ForEach(tfPlan.coalescePlan)
 		}
 	case "child_modules":
 		for _, child := range value.Array() {
-			for k, v := range child.Map() {
-				CoalescePlan(tfPlan, k, v)
-			}
+			child.ForEach(tfPlan.coalescePlan)
 		}
 	default:
-		if key == "address" {
+		if key.String() == "address" {
 			tfPlan.CurItemIndex = value.String()
+			tfPlan.Items[tfPlan.CurItemIndex] = make(map[string]gjson.Result)
 			break
 		}
-		item := make(map[string]map[string]gjson.Result)
-		item[tfPlan.CurItemIndex] = make(map[string]gjson.Result)
-		item[tfPlan.CurItemIndex][key] = value
-		tfPlan.Items = item
+		tfPlan.Items[tfPlan.CurItemIndex][key.String()] = value
+		//fmt.Printf("Add key %v and value %v into %v\n\n", key, value, tfPlan.CurItemIndex)
 	}
 
 	return true
@@ -94,20 +97,29 @@ func CoalescePlan(tfPlan *TFPlan, key string, value gjson.Result) bool {
 // Equal evaluate TFPlan and TFTestResource and returns the diff and if it is equal
 // or not.
 func Equal(tfTestResource TFTestResource, tfPlan TFPlan) (TFDiff, bool) {
-	returnValue := true
 	tfDiff := TFDiff{}
-	resources := gjson.GetBytes(tfPlan.Data, tfTestResource.Filter)
-	for k, v := range tfTestResource.Check {
-		value := gjson.GetBytes([]byte(resources.Raw), k)
-		if !value.Exists() {
+	resource, ok := tfPlan.Items[tfTestResource.Address]
+	if !ok {
+		tfDiffItem := TFDiffItem{
+			Got:  "does not exist",
+			Key:  tfTestResource.Address,
+			Want: "exist",
+		}
+		tfDiff.Items = append(tfDiff.Items, tfDiffItem)
+
+		return tfDiff, false
+	}
+	for k, v := range tfTestResource.Metadata {
+		value, ok := resource[k]
+		if !ok {
 			tfDiffItem := TFDiffItem{
 				Got:  "",
 				Key:  k,
 				Want: v,
 			}
 			tfDiff.Items = append(tfDiff.Items, tfDiffItem)
-			returnValue = false
-			continue
+
+			return tfDiff, false
 		}
 		if value.String() != v {
 			tfDiffItem := TFDiffItem{
@@ -116,11 +128,12 @@ func Equal(tfTestResource TFTestResource, tfPlan TFPlan) (TFDiff, bool) {
 				Want: v,
 			}
 			tfDiff.Items = append(tfDiff.Items, tfDiffItem)
-			returnValue = false
+
+			return tfDiff, false
 		}
 	}
 
-	return tfDiff, returnValue
+	return tfDiff, true
 }
 
 // Diff returns all diffs in a string concanated by new line
