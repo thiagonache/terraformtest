@@ -14,7 +14,7 @@ type TFPlan struct {
 	CurDepth, MaxDepth int
 	CurItemIndex       string
 	Data               []byte
-	Items              map[string]map[string]gjson.Result
+	ItemsMetadata      map[string]map[string]gjson.Result
 }
 
 // TFDiff is a struct containing slice of TFDiffItem
@@ -37,10 +37,10 @@ type TFTestResource struct {
 // NewTerraformTest instantiate a new TFPlan object and returns a pointer to it.
 func NewTerraformTest(planPath string) (*TFPlan, error) {
 	tfp := &TFPlan{
-		CurItemIndex: "",
-		Data:         []byte{},
-		Items:        map[string]map[string]gjson.Result{},
-		MaxDepth:     1000,
+		CurItemIndex:  "",
+		Data:          []byte{},
+		ItemsMetadata: map[string]map[string]gjson.Result{},
+		MaxDepth:      1000,
 	}
 
 	f, err := os.Open(planPath)
@@ -84,10 +84,10 @@ func (tfPlan *TFPlan) coalescePlan(key, value gjson.Result) bool {
 	default:
 		if key.String() == "address" {
 			tfPlan.CurItemIndex = value.String()
-			tfPlan.Items[tfPlan.CurItemIndex] = make(map[string]gjson.Result)
+			tfPlan.ItemsMetadata[tfPlan.CurItemIndex] = make(map[string]gjson.Result)
 			break
 		}
-		tfPlan.Items[tfPlan.CurItemIndex][key.String()] = value
+		tfPlan.ItemsMetadata[tfPlan.CurItemIndex][key.String()] = value
 		//fmt.Printf("Add key %v and value %v into %v\n\n", key, value, tfPlan.CurItemIndex)
 	}
 
@@ -98,7 +98,7 @@ func (tfPlan *TFPlan) coalescePlan(key, value gjson.Result) bool {
 // or not.
 func Equal(tfTestResource TFTestResource, tfPlan TFPlan) (TFDiff, bool) {
 	tfDiff := TFDiff{}
-	resource, ok := tfPlan.Items[tfTestResource.Address]
+	resource, ok := tfPlan.ItemsMetadata[tfTestResource.Address]
 	if !ok {
 		tfDiffItem := TFDiffItem{
 			Got:  "does not exist",

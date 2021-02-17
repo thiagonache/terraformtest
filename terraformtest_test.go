@@ -26,8 +26,8 @@ func TestCoalescePlan(t *testing.T) {
 	t.Parallel()
 
 	tfPlan := &terraformtest.TFPlan{
-		MaxDepth: 1000,
-		Items:    make(map[string]map[string]gjson.Result),
+		MaxDepth:      1000,
+		ItemsMetadata: make(map[string]map[string]gjson.Result),
 	}
 	want := make(map[string]map[string]gjson.Result)
 	want["module.my_module"] = make(map[string]gjson.Result)
@@ -60,7 +60,7 @@ func TestCoalescePlan(t *testing.T) {
 	  `)
 	tfPlan.Data = data
 	tfPlan.Coalesce()
-	got := tfPlan.Items
+	got := tfPlan.ItemsMetadata
 	if !cmp.Equal(want, got) {
 		t.Errorf(cmp.Diff(want, got))
 	}
