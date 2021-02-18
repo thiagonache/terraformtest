@@ -11,27 +11,84 @@ import (
 func TestReadPlanFile(t *testing.T) {
 	t.Parallel()
 
-	want := 9028
-	tfPlan, err := terraformtest.NewTerraformTest("testdata/terraform.tfplan")
+	wantLen := 9028
+	tfPlan, err := terraformtest.New("testdata/terraform.plan.json")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if want != len(tfPlan.Data) {
-		t.Errorf("want json size in bytes of %d but got %d", want, len(tfPlan.Data))
+	if wantLen != len(tfPlan.Data) {
+		t.Errorf("want json size in bytes of %d but got %d", wantLen, len(tfPlan.Data))
 	}
 }
+
+// func TestRefactoredAPI(t *testing.T) {
+// 	t.Parallel()
+// 	p, err := terraformtest.ReadPlan("testdata/terraform.plan.json")
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	gotRS := p.ResourceSet()
+// 	wantNumResources := 3
+// 	if len(gotRS) < wantNumResources {
+// 		t.Errorf("want %d resources in plan, got %d", wantNumResources, len(gotRS))
+// 	}
+// 	wantRes := terraformtest.TFTestResource{
+// 		Address: "module.nomad_job.nomad_job.test_job",
+// 		Metadata: map[string]string{
+// 			"type": "nomad_job",
+// 			"name": "test_job",
+// 			// "values.name":          "unit-test",
+// 			// "values.datacenters.0": "dc1",
+// 		},
+// 	}
+// 	if !gotRS.Contains(wantRes) {
+// 		t.Errorf("want resource set to contain resource %q, but it didn't:", wantRes.Address)
+// 	}
+// 	wantRS := []terraformtest.TFTestResource{
+// 		{
+// 			Address: "module.nomad_job.nomad_job.test_job",
+// 			Metadata: map[string]string{
+// 				"type": "nomad_job",
+// 				"name": "test_job",
+// 				// "values.name":          "unit-test",
+// 				// "values.datacenters.0": "dc1",
+// 			},
+// 		},
+// 		{
+// 			Address: "module.nomad_job.nomad_job.test_job2",
+// 			Metadata: map[string]string{
+// 				"type": "nomad_job",
+// 				"name": "test_job",
+// 				// "values.name":          "unit-test",
+// 				// "values.datacenters.0": "dc1",
+// 			},
+// 		},
+// 		{
+// 			Address: "module.nomad_job.nomad_job.test_job3",
+// 			Metadata: map[string]string{
+// 				"type": "nomad_job",
+// 				"name": "test_job",
+// 				// "values.name":          "unit-test",
+// 				// "values.datacenters.0": "dc1",
+// 			},
+// 		},
+// 	}
+// 	if !terraformtest.Equal(wantRS, gotRS) {
+// 		t.Error(terraformtest.Diff(wantRS, gotRS))
+// 	}
+// }
 
 func TestCoalescePlan(t *testing.T) {
 	t.Parallel()
 
 	tfPlan := &terraformtest.TFPlan{
 		MaxDepth: 1000,
-		Items:    make(map[string]map[string]gjson.Result),
+		Items:    map[string]map[string]gjson.Result{},
 	}
-	want := make(map[string]map[string]gjson.Result)
-	want["module.my_module"] = make(map[string]gjson.Result)
-	want["abc"] = make(map[string]gjson.Result)
+	want := map[string]map[string]gjson.Result{}
+	want["module.my_module"] = map[string]gjson.Result{}
+	want["abc"] = map[string]gjson.Result{}
 	want["abc"]["name"] = gjson.Result{
 		Type:  gjson.String,
 		Raw:   `"bogus"`,
@@ -60,7 +117,6 @@ func TestCoalescePlan(t *testing.T) {
 	  `)
 	tfPlan.Data = data
 	tfPlan.Coalesce()
-
 	got := tfPlan.Items
 	if !cmp.Equal(want, got) {
 		t.Errorf(cmp.Diff(want, got))
@@ -80,7 +136,7 @@ func TestEqual(t *testing.T) {
 			// "values.datacenters.0": "dc1",
 		},
 	}
-	got, err := terraformtest.NewTerraformTest("testdata/terraform.tfplan")
+	got, err := terraformtest.New("testdata/terraform.plan.json")
 	if err != nil {
 		t.Fatalf("cannot run NewTerraformTest function: %v", err)
 	}
@@ -106,7 +162,7 @@ func TestTFAWS101NatEIPOne(t *testing.T) {
 		},
 	}
 
-	got, err := terraformtest.NewTerraformTest("testdata/terraform-aws-101.tfplan.json")
+	got, err := terraformtest.New("testdata/terraform-aws-101.plan.json")
 	if err != nil {
 		t.Fatalf("cannot read terraform plan: %v", err)
 	}
@@ -132,7 +188,7 @@ func TestTFAWS101DBOptionGroup(t *testing.T) {
 		},
 	}
 
-	got, err := terraformtest.NewTerraformTest("testdata/terraform-aws-101.tfplan.json")
+	got, err := terraformtest.New("testdata/terraform-aws-101.plan.json")
 	if err != nil {
 		t.Fatalf("cannot read terraform plan: %v", err)
 	}

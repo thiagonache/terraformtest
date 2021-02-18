@@ -3,7 +3,7 @@ package terraformtest
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 
 	"github.com/tidwall/gjson"
@@ -34,13 +34,13 @@ type TFTestResource struct {
 	Values   map[string]string
 }
 
-// NewTerraformTest instantiate a new TFPlan object and returns a pointer to it.
-func NewTerraformTest(planPath string) (*TFPlan, error) {
+// New instantiate a new TFPlan object and returns a pointer to it.
+func New(planPath string) (*TFPlan, error) {
 	tfp := &TFPlan{
 		CurItemIndex: "",
 		Data:         []byte{},
 		Items:        map[string]map[string]gjson.Result{},
-		MaxDepth:     1000,
+		MaxDepth:     50,
 	}
 
 	f, err := os.Open(planPath)
@@ -48,7 +48,7 @@ func NewTerraformTest(planPath string) (*TFPlan, error) {
 		return tfp, fmt.Errorf("cannot open file: %s", planPath)
 	}
 	reader := bufio.NewReader(f)
-	plan, err := ioutil.ReadAll(reader)
+	plan, err := io.ReadAll(reader)
 	if err != nil {
 		return tfp, fmt.Errorf("cannot read data from IO Reader: %v", err)
 	}
