@@ -83,8 +83,8 @@ func TestCoalescePlan(t *testing.T) {
 	t.Parallel()
 
 	tfPlan := &terraformtest.TFPlan{
-		MaxDepth: 10,
-		Items:    map[string]terraformtest.TFResultResource{},
+		LoopControl: terraformtest.LoopControl{MaxDepth: 10},
+		Items:       map[string]terraformtest.TFResultResource{},
 	}
 	want := map[string]terraformtest.TFResultResource{}
 	want["Metadata"] = map[string]map[string]gjson.Result{}
