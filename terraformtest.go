@@ -11,10 +11,10 @@ import (
 
 // TFPlan is a struct containing the terraform plan data
 type TFPlan struct {
-	CurDepth, MaxDepth int
-	CurItemIndex       string
-	Data               []byte
-	ItemsMetadata      map[string]map[string]gjson.Result
+	CurDepth, MaxDepth          int
+	CurItemIndex, CurItemSubKey string
+	Data                        []byte
+	Items                       map[string]TFResultResource
 }
 
 // TFDiff is a struct containing slice of TFDiffItem
@@ -34,13 +34,14 @@ type TFTestResource struct {
 	Values   map[string]string
 }
 
-// NewTerraformTest instantiate a new TFPlan object and returns a pointer to it.
-func NewTerraformTest(planPath string) (*TFPlan, error) {
+// TFResultResource is a map to store the Metadata and Values items to make easier to find resource items.
+type TFResultResource map[string]map[string]gjson.Result
+
+// New instantiate a new TFPlan object and returns a pointer to it.
+func New(planPath string) (*TFPlan, error) {
 	tfp := &TFPlan{
-		CurItemIndex:  "",
-		Data:          []byte{},
-		ItemsMetadata: map[string]map[string]gjson.Result{},
-		MaxDepth:      1000,
+		Items:    map[string]TFResultResource{},
+		MaxDepth: 10,
 	}
 
 	f, err := os.Open(planPath)
@@ -66,7 +67,6 @@ func (tfPlan *TFPlan) Coalesce() {
 }
 
 func (tfPlan *TFPlan) coalescePlan(key, value gjson.Result) bool {
-	tfPlan.CurDepth++
 	if tfPlan.CurDepth > tfPlan.MaxDepth {
 		fmt.Println("MaxDepth reached")
 		return false
@@ -74,21 +74,36 @@ func (tfPlan *TFPlan) coalescePlan(key, value gjson.Result) bool {
 
 	switch key.String() {
 	case "resources":
+		tfPlan.CurDepth++
 		for _, child := range value.Array() {
 			child.ForEach(tfPlan.coalescePlan)
 		}
 	case "child_modules":
+		tfPlan.CurDepth++
 		for _, child := range value.Array() {
 			child.ForEach(tfPlan.coalescePlan)
 		}
+	case "values":
+		tfPlan.CurItemSubKey = "Values"
+		_, ok := tfPlan.Items[tfPlan.CurItemSubKey]
+		if !ok {
+			tfPlan.Items[tfPlan.CurItemSubKey] = map[string]map[string]gjson.Result{}
+		}
+		tfPlan.Items[tfPlan.CurItemSubKey][tfPlan.CurItemIndex] = map[string]gjson.Result{}
+		value.ForEach(tfPlan.coalescePlan)
 	default:
 		if key.String() == "address" {
+			tfPlan.CurItemSubKey = "Metadata"
 			tfPlan.CurItemIndex = value.String()
-			tfPlan.ItemsMetadata[tfPlan.CurItemIndex] = make(map[string]gjson.Result)
+			_, ok := tfPlan.Items[tfPlan.CurItemSubKey]
+			if !ok {
+				tfPlan.Items[tfPlan.CurItemSubKey] = map[string]map[string]gjson.Result{}
+			}
+			tfPlan.Items[tfPlan.CurItemSubKey][tfPlan.CurItemIndex] = map[string]gjson.Result{}
 			break
 		}
-		tfPlan.ItemsMetadata[tfPlan.CurItemIndex][key.String()] = value
-		//fmt.Printf("Add key %v and value %v into %v\n\n", key, value, tfPlan.CurItemIndex)
+		tfPlan.Items[tfPlan.CurItemSubKey][tfPlan.CurItemIndex][key.String()] = value
+		//fmt.Printf("Add key %v and value %v into %v into %v\n\n", key, value, tfPlan.CurItemIndex, tfPlan.CurItemSubKey)
 	}
 
 	return true
@@ -98,7 +113,7 @@ func (tfPlan *TFPlan) coalescePlan(key, value gjson.Result) bool {
 // or not.
 func Equal(tfTestResource TFTestResource, tfPlan TFPlan) (TFDiff, bool) {
 	tfDiff := TFDiff{}
-	resource, ok := tfPlan.ItemsMetadata[tfTestResource.Address]
+	resource, ok := tfPlan.Items["Metadata"][tfTestResource.Address]
 	if !ok {
 		tfDiffItem := TFDiffItem{
 			Got:  "does not exist",

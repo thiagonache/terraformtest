@@ -12,7 +12,7 @@ func TestReadPlanFile(t *testing.T) {
 	t.Parallel()
 
 	want := 9028
-	tfPlan, err := terraformtest.NewTerraformTest("testdata/terraform.tfplan")
+	tfPlan, err := terraformtest.New("testdata/terraform.tfplan")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -26,13 +26,14 @@ func TestCoalescePlan(t *testing.T) {
 	t.Parallel()
 
 	tfPlan := &terraformtest.TFPlan{
-		MaxDepth:      1000,
-		ItemsMetadata: make(map[string]map[string]gjson.Result),
+		MaxDepth: 1000,
+		Items:    map[string]terraformtest.TFResultResource{},
 	}
-	want := make(map[string]map[string]gjson.Result)
-	want["module.my_module"] = make(map[string]gjson.Result)
-	want["abc"] = make(map[string]gjson.Result)
-	want["abc"]["name"] = gjson.Result{
+	want := map[string]terraformtest.TFResultResource{}
+	want["Metadata"] = map[string]map[string]gjson.Result{}
+	want["Metadata"]["abc"] = map[string]gjson.Result{}
+	want["Metadata"]["module.my_module"] = map[string]gjson.Result{}
+	want["Metadata"]["abc"]["name"] = gjson.Result{
 		Type:  gjson.String,
 		Raw:   `"bogus"`,
 		Str:   "bogus",
@@ -60,7 +61,7 @@ func TestCoalescePlan(t *testing.T) {
 	  `)
 	tfPlan.Data = data
 	tfPlan.Coalesce()
-	got := tfPlan.ItemsMetadata
+	got := tfPlan.Items
 	if !cmp.Equal(want, got) {
 		t.Errorf(cmp.Diff(want, got))
 	}
@@ -79,9 +80,9 @@ func TestEqual(t *testing.T) {
 			// "values.datacenters.0": "dc1",
 		},
 	}
-	got, err := terraformtest.NewTerraformTest("testdata/terraform.tfplan")
+	got, err := terraformtest.New("testdata/terraform.tfplan")
 	if err != nil {
-		t.Fatalf("cannot run NewTerraformTest function: %v", err)
+		t.Fatalf("cannot run New function: %v", err)
 	}
 
 	tfDiff, equal := terraformtest.Equal(want, *got)
@@ -104,7 +105,7 @@ func TestTFAWS101NatEIPOne(t *testing.T) {
 		},
 	}
 
-	got, err := terraformtest.NewTerraformTest("testdata/terraform-aws-101.tfplan.json")
+	got, err := terraformtest.New("testdata/terraform-aws-101.tfplan.json")
 	if err != nil {
 		t.Fatalf("cannot read terraform plan: %v", err)
 	}
@@ -129,7 +130,7 @@ func TestTFAWS101DBOptionGroup(t *testing.T) {
 		},
 	}
 
-	got, err := terraformtest.NewTerraformTest("testdata/terraform-aws-101.tfplan.json")
+	got, err := terraformtest.New("testdata/terraform-aws-101.tfplan.json")
 	if err != nil {
 		t.Fatalf("cannot read terraform plan: %v", err)
 	}
