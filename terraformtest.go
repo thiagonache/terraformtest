@@ -3,7 +3,7 @@ package terraformtest
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 
 	"github.com/tidwall/gjson"
@@ -49,7 +49,7 @@ func New(planPath string) (*TFPlan, error) {
 		return tfp, fmt.Errorf("cannot open file: %s", planPath)
 	}
 	reader := bufio.NewReader(f)
-	plan, err := ioutil.ReadAll(reader)
+	plan, err := io.ReadAll(reader)
 	if err != nil {
 		return tfp, fmt.Errorf("cannot read data from IO Reader: %v", err)
 	}
