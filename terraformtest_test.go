@@ -14,36 +14,40 @@ func TestReadPlanFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if wantLen != len(tfPlan.Data) {
-		t.Errorf("want json size in bytes of %d but got %d", wantLen, len(tfPlan.Data))
+	if wantLen != len(tfPlan.PlanData) {
+		t.Errorf("want json size in bytes of %d but got %d", wantLen, len(tfPlan.PlanData))
 	}
 }
 
 func TestRefactoredAPI(t *testing.T) {
 	t.Parallel()
+
 	p, err := terraformtest.ReadPlan("testdata/terraform.plan.json")
 	if err != nil {
 		t.Fatal(err)
 	}
-	gotRS := p.ResourceSet
+	gotRS := p.PlanResourcesSet
 	wantNumResources := 1
-	if len(gotRS) < wantNumResources {
-		t.Errorf("want %d resources in plan, got %d", wantNumResources, len(gotRS))
+	if len(gotRS.Items) < wantNumResources {
+		t.Errorf("want %d resources in plan, got %d", wantNumResources, len(gotRS.Items))
+	}
+
+	wantRes := terraformtest.TestResource{
+		Address: "module.nomad_job.nomad_job.test_job",
+		Metadata: map[string]string{
+			"type": "nomad_job",
+			"name": "test_job",
+		},
+		Values: map[string]string{
+			"name": "unit-test",
+		},
+	}
+
+	if !gotRS.Contains(wantRes) {
+		t.Error(gotRS.Diff())
 	}
 }
 
-// 	wantRes := terraformtest.TFTestResource{
-// 		Address: "module.nomad_job.nomad_job.test_job",
-// 		Metadata: map[string]string{
-// 			"type": "nomad_job",
-// 			"name": "test_job",
-// 			// "values.name":          "unit-test",
-// 			// "values.datacenters.0": "dc1",
-// 		},
-// 	}
-// 	if !gotRS.Contains(wantRes) {
-// 		t.Errorf("want resource set to contain resource %q, but it didn't:", wantRes.Address)
-// 	}
 // 	wantRS := []terraformtest.TFTestResource{
 // 		{
 // 			Address: "module.nomad_job.nomad_job.test_job",
@@ -81,7 +85,7 @@ func TestRefactoredAPI(t *testing.T) {
 // func TestCoalescePlan(t *testing.T) {
 // 	t.Parallel()
 
-// 	tfPlan := &terraformtest.TFPlan{
+// 	tfPlan := &terraformtest.TFTest{
 // 		LoopControl: terraformtest.LoopControl{MaxDepth: 10},
 // 		Items:       map[string]terraformtest.TFResultResource{},
 // 	}
@@ -115,7 +119,7 @@ func TestRefactoredAPI(t *testing.T) {
 // 		}
 // 	  }
 // 	  `)
-// 	tfPlan.Data = data
+// 	tfPlan.PlanData = data
 // 	tfPlan.Coalesce()
 // 	got := tfPlan.Items
 // 	if !cmp.Equal(want, got) {
