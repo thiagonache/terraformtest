@@ -12,12 +12,13 @@ import (
 type LoopControl struct {
 	CurDepth, MaxDepth          int
 	CurItemIndex, CurItemSubKey string
+	PrevItem                    string
 }
 
 // TFPlan is a struct containing the terraform plan data
 type TFPlan struct {
 	Data        []byte
-	Items       map[string]TFResultResource
+	ResourceSet map[string]TFResultResource
 	LoopControl LoopControl
 }
 
@@ -41,11 +42,11 @@ type TFTestResource struct {
 // TFResultResource is a map to store the Metadata and Values items to make easier to find resource items.
 type TFResultResource map[string]map[string]gjson.Result
 
-// New instantiate a new TFPlan object and returns a pointer to it.
-func New(planPath string) (*TFPlan, error) {
+// ReadPlan instantiate a new TFPlan object and returns a pointer to it.
+func ReadPlan(planPath string) (*TFPlan, error) {
 	tfp := &TFPlan{
 		LoopControl: LoopControl{MaxDepth: 10},
-		Items:       map[string]TFResultResource{},
+		ResourceSet: map[string]TFResultResource{},
 	}
 
 	f, err := os.Open(planPath)
@@ -77,36 +78,41 @@ func (tfPlan *TFPlan) coalescePlan(key, value gjson.Result) bool {
 
 	switch key.String() {
 	case "resources":
+		tfPlan.LoopControl.PrevItem = "resources"
 		tfPlan.LoopControl.CurDepth++
 		for _, child := range value.Array() {
 			child.ForEach(tfPlan.coalescePlan)
 		}
 	case "child_modules":
+		tfPlan.LoopControl.PrevItem = "child_modules"
 		tfPlan.LoopControl.CurDepth++
 		for _, child := range value.Array() {
 			child.ForEach(tfPlan.coalescePlan)
 		}
 	case "values":
 		tfPlan.LoopControl.CurItemSubKey = "Values"
-		_, ok := tfPlan.Items[tfPlan.LoopControl.CurItemSubKey]
+		_, ok := tfPlan.ResourceSet[tfPlan.LoopControl.CurItemIndex]
 		if !ok {
-			tfPlan.Items[tfPlan.LoopControl.CurItemSubKey] = map[string]map[string]gjson.Result{}
+			tfPlan.ResourceSet[tfPlan.LoopControl.CurItemIndex] = map[string]map[string]gjson.Result{}
 		}
-		tfPlan.Items[tfPlan.LoopControl.CurItemSubKey][tfPlan.LoopControl.CurItemIndex] = map[string]gjson.Result{}
+		tfPlan.ResourceSet[tfPlan.LoopControl.CurItemIndex][tfPlan.LoopControl.CurItemSubKey] = map[string]gjson.Result{}
 		value.ForEach(tfPlan.coalescePlan)
-	default:
-		if key.String() == "address" {
-			tfPlan.LoopControl.CurItemSubKey = "Metadata"
-			tfPlan.LoopControl.CurItemIndex = value.String()
-			_, ok := tfPlan.Items[tfPlan.LoopControl.CurItemSubKey]
-			if !ok {
-				tfPlan.Items[tfPlan.LoopControl.CurItemSubKey] = map[string]map[string]gjson.Result{}
-			}
-			tfPlan.Items[tfPlan.LoopControl.CurItemSubKey][tfPlan.LoopControl.CurItemIndex] = map[string]gjson.Result{}
+	case "address":
+		// We are only interested in resources address
+		if tfPlan.LoopControl.PrevItem != "resources" {
 			break
 		}
-		tfPlan.Items[tfPlan.LoopControl.CurItemSubKey][tfPlan.LoopControl.CurItemIndex][key.String()] = value
-		//fmt.Printf("Add key %v and value %v into %v into %v\n\n", key, value, tfPlan.CurItemIndex, tfPlan.CurItemSubKey)
+		tfPlan.LoopControl.CurItemSubKey = "Metadata"
+		tfPlan.LoopControl.CurItemIndex = value.String()
+		_, ok := tfPlan.ResourceSet[tfPlan.LoopControl.CurItemIndex]
+		if !ok {
+			tfPlan.ResourceSet[tfPlan.LoopControl.CurItemIndex] = map[string]map[string]gjson.Result{}
+		}
+		tfPlan.ResourceSet[tfPlan.LoopControl.CurItemIndex][tfPlan.LoopControl.CurItemSubKey] = map[string]gjson.Result{}
+
+	default:
+		tfPlan.ResourceSet[tfPlan.LoopControl.CurItemIndex][tfPlan.LoopControl.CurItemSubKey][key.String()] = value
+		//fmt.Printf("Add key %v and value %v into %v into %v\n\n", key, value, tfPlan.LoopControl.CurItemIndex, tfPlan.LoopControl.CurItemSubKey)
 	}
 
 	return true
@@ -116,7 +122,7 @@ func (tfPlan *TFPlan) coalescePlan(key, value gjson.Result) bool {
 // or not.
 func Equal(tfTestResource TFTestResource, tfPlan TFPlan) (TFDiff, bool) {
 	tfDiff := TFDiff{}
-	resource, ok := tfPlan.Items["Metadata"][tfTestResource.Address]
+	resource, ok := tfPlan.ResourceSet["Metadata"][tfTestResource.Address]
 	if !ok {
 		tfDiffItem := TFDiffItem{
 			Got:  "does not exist",
