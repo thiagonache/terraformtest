@@ -265,8 +265,6 @@ func Equal(resources []Resource, rs *ResourceSet) bool {
 				rs.CompDiff.Items = append(rs.CompDiff.Items, item)
 				equal = false
 			}
-			// fmt.Println("KEY", k, "VALUE", v, "found", valueFound)
-			// os.Exit(1)
 		}
 	}
 
