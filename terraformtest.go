@@ -12,128 +12,128 @@ import (
 type LoopControl struct {
 	CurDepth, MaxDepth          int
 	CurItemIndex, CurItemSubKey string
-	PrevItem                    string
+	PrevItemIndex               string
 }
 
-// Test is the main struct containing the terraform plan data
+// Test is the main struct containing the test data
 type Test struct {
-	PlanData         []byte
-	LoopControl      LoopControl
-	PlanResourcesSet PlanResourceSet
+	PlanData     []byte
+	LoopControl  LoopControl
+	ResourcesSet ResourceSet
 }
 
-// TestDiff is a struct containing slice of DiffItem
-type TestDiff struct {
-	Items []DiffItem
+// CompDiff is a struct containing slice of CompDiffItem
+type CompDiff struct {
+	Items []CompDiffItem
 }
 
-// DiffItem is a struct containing got, key and want values for the diff
-type DiffItem struct {
+// CompDiffItem is a struct containing got, key and want values for the diff
+type CompDiffItem struct {
 	Got, Key, Want string
 }
 
-// TFTestResource is a struct with values to be checked and JSON query filter
-type TestResource struct {
+type Resource struct {
 	Address  string
 	Metadata map[string]string
 	Values   map[string]string
 }
 
-// TFResourceSet is a map to store the Metadata and Values items to make easier to find resource items.
-type PlanResourceSet struct {
+// ResourceSet is a map to store the Metadata and Values items to make easier to find resource items.
+type ResourceSet struct {
 	Items    map[string]map[string]map[string]gjson.Result
-	TestDiff TestDiff
+	CompDiff CompDiff
 }
 
-// ReadPlan instantiate a new TFTest object and returns a pointer to it.
 func ReadPlan(planPath string) (*Test, error) {
-	tfp := &Test{
+	tf := &Test{
 		LoopControl: LoopControl{MaxDepth: 10},
-		PlanResourcesSet: PlanResourceSet{
+		ResourcesSet: ResourceSet{
 			Items:    map[string]map[string]map[string]gjson.Result{},
-			TestDiff: TestDiff{},
+			CompDiff: CompDiff{},
 		},
 	}
 
 	f, err := os.Open(planPath)
 	if err != nil {
-		return tfp, fmt.Errorf("cannot open file: %s", planPath)
+		return tf, fmt.Errorf("cannot open file: %s", planPath)
 	}
+	defer f.Close()
+
 	plan, err := io.ReadAll(f)
 	if err != nil {
-		return tfp, fmt.Errorf("cannot read data from IO Reader: %v", err)
+		return tf, fmt.Errorf("cannot read data from IO Reader: %v", err)
 	}
 
-	tfp.PlanData = plan
-	tfp.ResourceSet()
+	tf.PlanData = plan
+	tf.ResourceSet()
 
-	return tfp, nil
+	return tf, nil
 }
 
-func (resourceSet *PlanResourceSet) Contains(tfTestResource TestResource) bool {
-	metadata, ok := resourceSet.Items[tfTestResource.Address]["Metadata"]
+func (rs *ResourceSet) Contains(r Resource) bool {
+	metadata, ok := rs.Items[r.Address]["Metadata"]
 	if !ok {
-		tfDiffItem := DiffItem{
+		item := CompDiffItem{
 			Got:  "does not exist",
-			Key:  tfTestResource.Address,
+			Key:  r.Address,
 			Want: "exist",
 		}
-		resourceSet.TestDiff.Items = append(resourceSet.TestDiff.Items, tfDiffItem)
+		rs.CompDiff.Items = append(rs.CompDiff.Items, item)
 
 		return false
 	}
-	for k, v := range tfTestResource.Metadata {
-		value, ok := metadata[k]
+	for k, v := range r.Metadata {
+		valueFound, ok := metadata[k]
 		if !ok {
-			tfDiffItem := DiffItem{
+			item := CompDiffItem{
 				Got:  "",
 				Key:  k,
 				Want: v,
 			}
-			resourceSet.TestDiff.Items = append(resourceSet.TestDiff.Items, tfDiffItem)
+			rs.CompDiff.Items = append(rs.CompDiff.Items, item)
 			return false
 		}
-		if value.String() != v {
-			tfDiffItem := DiffItem{
-				Got:  value.String(),
+		if valueFound.String() != v {
+			item := CompDiffItem{
+				Got:  valueFound.String(),
 				Key:  k,
 				Want: v,
 			}
-			resourceSet.TestDiff.Items = append(resourceSet.TestDiff.Items, tfDiffItem)
+			rs.CompDiff.Items = append(rs.CompDiff.Items, item)
 			return false
 		}
 	}
 
-	resource, ok := resourceSet.Items[tfTestResource.Address]["Values"]
+	values, ok := rs.Items[r.Address]["Values"]
 	if !ok {
-		tfDiffItem := DiffItem{
+		item := CompDiffItem{
 			Got:  "does not exist",
-			Key:  tfTestResource.Address,
+			Key:  r.Address,
 			Want: "exist",
 		}
-		resourceSet.TestDiff.Items = append(resourceSet.TestDiff.Items, tfDiffItem)
+		rs.CompDiff.Items = append(rs.CompDiff.Items, item)
 
 		return false
 	}
-	for k, v := range tfTestResource.Values {
-		value, ok := resource[k]
+	for k, v := range r.Values {
+		valueFound, ok := values[k]
 		if !ok {
-			tfDiffItem := DiffItem{
+			item := CompDiffItem{
 				Got:  "",
 				Key:  k,
 				Want: v,
 			}
-			resourceSet.TestDiff.Items = append(resourceSet.TestDiff.Items, tfDiffItem)
+			rs.CompDiff.Items = append(rs.CompDiff.Items, item)
 
 			return false
 		}
-		if value.String() != v {
-			tfDiffItem := DiffItem{
-				Got:  value.String(),
+		if valueFound.String() != v {
+			item := CompDiffItem{
+				Got:  valueFound.String(),
 				Key:  k,
 				Want: v,
 			}
-			resourceSet.TestDiff.Items = append(resourceSet.TestDiff.Items, tfDiffItem)
+			rs.CompDiff.Items = append(rs.CompDiff.Items, item)
 
 			return false
 		}
@@ -142,9 +142,9 @@ func (resourceSet *PlanResourceSet) Contains(tfTestResource TestResource) bool {
 	return true
 }
 
-func (resourceSet PlanResourceSet) Diff() string {
+func (resourceSet ResourceSet) Diff() string {
 	var stringDiff string
-	for _, diff := range resourceSet.TestDiff.Items {
+	for _, diff := range resourceSet.CompDiff.Items {
 		stringDiff += fmt.Sprintf("key %q: want %q, got %q\n", diff.Key, diff.Want, diff.Got)
 	}
 	return stringDiff
@@ -164,80 +164,80 @@ func (tfPlan *Test) resourceSet(key, value gjson.Result) bool {
 
 	switch key.String() {
 	case "resources":
-		tfPlan.LoopControl.PrevItem = "resources"
+		tfPlan.LoopControl.PrevItemIndex = "resources"
 		tfPlan.LoopControl.CurDepth++
 		for _, child := range value.Array() {
 			child.ForEach(tfPlan.resourceSet)
 		}
 	case "child_modules":
-		tfPlan.LoopControl.PrevItem = "child_modules"
+		tfPlan.LoopControl.PrevItemIndex = "child_modules"
 		tfPlan.LoopControl.CurDepth++
 		for _, child := range value.Array() {
 			child.ForEach(tfPlan.resourceSet)
 		}
 	case "values":
 		tfPlan.LoopControl.CurItemSubKey = "Values"
-		_, ok := tfPlan.PlanResourcesSet.Items[tfPlan.LoopControl.CurItemIndex]
+		_, ok := tfPlan.ResourcesSet.Items[tfPlan.LoopControl.CurItemIndex]
 		if !ok {
-			tfPlan.PlanResourcesSet.Items[tfPlan.LoopControl.CurItemIndex] = map[string]map[string]gjson.Result{}
+			tfPlan.ResourcesSet.Items[tfPlan.LoopControl.CurItemIndex] = map[string]map[string]gjson.Result{}
 		}
-		tfPlan.PlanResourcesSet.Items[tfPlan.LoopControl.CurItemIndex][tfPlan.LoopControl.CurItemSubKey] = map[string]gjson.Result{}
+		tfPlan.ResourcesSet.Items[tfPlan.LoopControl.CurItemIndex][tfPlan.LoopControl.CurItemSubKey] = map[string]gjson.Result{}
 		value.ForEach(tfPlan.resourceSet)
 	case "address":
 		// We are only interested in resources address
-		if tfPlan.LoopControl.PrevItem != "resources" {
+		if tfPlan.LoopControl.PrevItemIndex != "resources" {
 			break
 		}
 		tfPlan.LoopControl.CurItemSubKey = "Metadata"
 		tfPlan.LoopControl.CurItemIndex = value.String()
-		_, ok := tfPlan.PlanResourcesSet.Items[tfPlan.LoopControl.CurItemIndex]
+		_, ok := tfPlan.ResourcesSet.Items[tfPlan.LoopControl.CurItemIndex]
 		if !ok {
-			tfPlan.PlanResourcesSet.Items[tfPlan.LoopControl.CurItemIndex] = map[string]map[string]gjson.Result{}
+			tfPlan.ResourcesSet.Items[tfPlan.LoopControl.CurItemIndex] = map[string]map[string]gjson.Result{}
 		}
-		tfPlan.PlanResourcesSet.Items[tfPlan.LoopControl.CurItemIndex][tfPlan.LoopControl.CurItemSubKey] = map[string]gjson.Result{}
+		tfPlan.ResourcesSet.Items[tfPlan.LoopControl.CurItemIndex][tfPlan.LoopControl.CurItemSubKey] = map[string]gjson.Result{}
 
 	default:
-		tfPlan.PlanResourcesSet.Items[tfPlan.LoopControl.CurItemIndex][tfPlan.LoopControl.CurItemSubKey][key.String()] = value
+		tfPlan.ResourcesSet.Items[tfPlan.LoopControl.CurItemIndex][tfPlan.LoopControl.CurItemSubKey][key.String()] = value
 		//fmt.Printf("Add key %v and value %v into %v into %v\n\n", key, value, tfPlan.LoopControl.CurItemIndex, tfPlan.LoopControl.CurItemSubKey)
 	}
 
 	return true
 }
 
-// Equal evaluate TFTest and TFTestResource and returns the diff and if it is equal
+// Equal evaluate TFTest and TFResource and returns the diff and if it is equal
 // or not.
 // func Equal(tfTestResource TFTestResource, tfPlan TFTest) (TFDiff, bool) {
 // 	tfDiff := TFDiff{}
 // 	resource, ok := tfPlan.ResourcesSet["Metadata"][tfTestResource.Address]
 // 	if !ok {
-// 		tfDiffItem := TFDiffItem{
+// 		item := TFCompDiffItem{
 // 			Got:  "does not exist",
 // 			Key:  tfTestResource.Address,
 // 			Want: "exist",
 // 		}
-// 		tfDiff.Items = append(tfDiff.Items, tfDiffItem)
+// 		tfDiff.Items = append(tfDiff.Items, item)
 
 // 		return tfDiff, false
 // 	}
 // 	for k, v := range tfTestResource.Metadata {
 // 		value, ok := resource[k]
 // 		if !ok {
-// 			tfDiffItem := TFDiffItem{
+// 			item := TFDiffItem{
 // 				Got:  "",
 // 				Key:  k,
 // 				Want: v,
 // 			}
-// 			tfDiff.Items = append(tfDiff.Items, tfDiffItem)
+// 			tfDiff.Items = append(tfDiff.Items, item)
 
 // 			return tfDiff, false
 // 		}
 // 		if value.String() != v {
-// 			tfDiffItem := TFDiffItem{
+// 			item := TFDiffItem{
 // 				Got:  value.String(),
 // 				Key:  k,
 // 				Want: v,
 // 			}
-// 			tfDiff.Items = append(tfDiff.Items, tfDiffItem)
+// 			tfDiff.Items = append(tfDiff.Items, item)
 
 // 			return tfDiff, false
 // 		}
@@ -247,7 +247,7 @@ func (tfPlan *Test) resourceSet(key, value gjson.Result) bool {
 // }
 
 // Diff returns all diffs in a string concanated by new line
-func Diff(tfDiff TestDiff) string {
+func Diff(tfDiff CompDiff) string {
 	var stringDiff string
 	for _, diff := range tfDiff.Items {
 		stringDiff += fmt.Sprintf("key %q: want %q, got %q\n", diff.Key, diff.Want, diff.Got)

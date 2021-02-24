@@ -9,30 +9,41 @@ func TestReadPlanFile(t *testing.T) {
 	t.Parallel()
 
 	wantLen := 9028
-	tfPlan, err := terraformtest.ReadPlan("testdata/terraform.plan.json")
+	p, err := terraformtest.ReadPlan("testdata/terraform.plan.json")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if wantLen != len(tfPlan.PlanData) {
-		t.Errorf("want json size in bytes of %d but got %d", wantLen, len(tfPlan.PlanData))
+	if wantLen != len(p.PlanData) {
+		t.Errorf("want json size in bytes of %d but got %d", wantLen, len(p.PlanData))
 	}
 }
 
-func TestRefactoredAPI(t *testing.T) {
+func TestNumberResources(t *testing.T) {
+	t.Parallel()
+
+	wantNumResources := 1
+
+	p, err := terraformtest.ReadPlan("testdata/terraform.plan.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	items := p.ResourcesSet.Items
+
+	if len(items) < wantNumResources {
+		t.Errorf("want %d resources in plan, got %d", wantNumResources, len(items))
+	}
+}
+
+func TestContains(t *testing.T) {
 	t.Parallel()
 
 	p, err := terraformtest.ReadPlan("testdata/terraform.plan.json")
 	if err != nil {
 		t.Fatal(err)
 	}
-	gotRS := p.PlanResourcesSet
-	wantNumResources := 1
-	if len(gotRS.Items) < wantNumResources {
-		t.Errorf("want %d resources in plan, got %d", wantNumResources, len(gotRS.Items))
-	}
-
-	wantRes := terraformtest.TestResource{
+	gotRS := p.ResourcesSet
+	wantRes := terraformtest.Resource{
 		Address: "module.nomad_job.nomad_job.test_job",
 		Metadata: map[string]string{
 			"type": "nomad_job",
