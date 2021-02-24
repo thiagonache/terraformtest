@@ -198,8 +198,41 @@ func (tfPlan *Test) transform(key, value gjson.Result) bool {
 
 	default:
 		tfPlan.Resources.Items[tfPlan.LoopControl.CurItemIndex][tfPlan.LoopControl.CurItemSubKey][key.String()] = value
-		fmt.Printf("Add key %v and value %v into %v into %v\n\n", key, value, tfPlan.LoopControl.CurItemIndex, tfPlan.LoopControl.CurItemSubKey)
+		//fmt.Printf("Add key %v and value %v into %v into %v\n\n", key, value, tfPlan.LoopControl.CurItemIndex, tfPlan.LoopControl.CurItemSubKey)
 	}
 
 	return true
+}
+
+func Equal(resources []Resource, rs *ResourceSet) bool {
+	equal := true
+	resourcesRS := map[string]struct{}{}
+
+	for _, r := range resources {
+		resourcesRS[r.Address] = struct{}{}
+		_, ok := rs.Items[r.Address]
+		if !ok {
+			item := CompDiffItem{
+				Got:  "does not exist",
+				Key:  r.Address,
+				Want: "exist in plan",
+			}
+			rs.CompDiff.Items = append(rs.CompDiff.Items, item)
+			equal = false
+		}
+	}
+
+	for k := range rs.Items {
+		_, ok := resourcesRS[k]
+		if !ok {
+			item := CompDiffItem{
+				Got:  "does not exist",
+				Key:  k,
+				Want: "exist in resources",
+			}
+			rs.CompDiff.Items = append(rs.CompDiff.Items, item)
+			equal = false
+		}
+	}
+	return equal
 }

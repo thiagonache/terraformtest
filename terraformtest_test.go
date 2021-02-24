@@ -85,13 +85,13 @@ func TestEqual(t *testing.T) {
 		},
 	}
 
-	p, err := terraformtest.ReadPlan("testdata/terraform.plan.json")
+	p, err := terraformtest.ReadPlan("testdata/terraform-aws-101.plan.json")
 	if err != nil {
 		t.Fatal(err)
 	}
 	gotRS := p.Resources
 
-	if !terraformtest.Equal(wantRS, gotRS) {
+	if !terraformtest.Equal(wantRS, &gotRS) {
 		t.Error(gotRS.Diff())
 	}
 }
