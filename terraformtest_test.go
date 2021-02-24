@@ -28,7 +28,7 @@ func TestNumberResources(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	items := p.ResourcesSet.Items
+	items := p.Resources.Items
 
 	if len(items) < wantNumResources {
 		t.Errorf("want %d resources in plan, got %d", wantNumResources, len(items))
@@ -38,11 +38,6 @@ func TestNumberResources(t *testing.T) {
 func TestContains(t *testing.T) {
 	t.Parallel()
 
-	p, err := terraformtest.ReadPlan("testdata/terraform.plan.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	gotRS := p.ResourcesSet
 	wantRes := terraformtest.Resource{
 		Address: "module.nomad_job.nomad_job.test_job",
 		Metadata: map[string]string{
@@ -50,48 +45,56 @@ func TestContains(t *testing.T) {
 			"name": "test_job",
 		},
 		Values: map[string]string{
-			"name": "unit-test",
+			"name":        "unit-test",
+			"datacenters": `["dc1"]`,
 		},
 	}
+
+	p, err := terraformtest.ReadPlan("testdata/terraform.plan.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	gotRS := p.Resources
 
 	if !gotRS.Contains(wantRes) {
 		t.Error(gotRS.Diff())
 	}
 }
 
-// 	wantRS := []terraformtest.TFTestResource{
-// 		{
-// 			Address: "module.nomad_job.nomad_job.test_job",
-// 			Metadata: map[string]string{
-// 				"type": "nomad_job",
-// 				"name": "test_job",
-// 				// "values.name":          "unit-test",
-// 				// "values.datacenters.0": "dc1",
-// 			},
-// 		},
-// 		{
-// 			Address: "module.nomad_job.nomad_job.test_job2",
-// 			Metadata: map[string]string{
-// 				"type": "nomad_job",
-// 				"name": "test_job",
-// 				// "values.name":          "unit-test",
-// 				// "values.datacenters.0": "dc1",
-// 			},
-// 		},
-// 		{
-// 			Address: "module.nomad_job.nomad_job.test_job3",
-// 			Metadata: map[string]string{
-// 				"type": "nomad_job",
-// 				"name": "test_job",
-// 				// "values.name":          "unit-test",
-// 				// "values.datacenters.0": "dc1",
-// 			},
-// 		},
-// 	}
-// 	if !terraformtest.Equal(wantRS, gotRS) {
-// 		t.Error(terraformtest.Diff(wantRS, gotRS))
-// 	}
-// }
+func TestEqual(t *testing.T) {
+	t.Parallel()
+
+	wantRS := []terraformtest.Resource{
+		{
+			Address: "module.nomad_job.nomad_job.test_job",
+			Metadata: map[string]string{
+				"type": "nomad_job",
+				"name": "test_job",
+			},
+			Values: map[string]string{
+				"name":        "unit-test",
+				"datacenters": `["dc1"]`,
+			},
+		},
+		{
+			Address: "module.nomad_job.nomad_job.test_job2",
+			Metadata: map[string]string{
+				"type": "nomad_job",
+				"name": "test_job",
+			},
+		},
+	}
+
+	p, err := terraformtest.ReadPlan("testdata/terraform.plan.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	gotRS := p.Resources
+
+	if !terraformtest.Equal(wantRS, gotRS) {
+		t.Error(gotRS.Diff())
+	}
+}
 
 // func TestCoalescePlan(t *testing.T) {
 // 	t.Parallel()

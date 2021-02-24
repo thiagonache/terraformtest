@@ -17,9 +17,9 @@ type LoopControl struct {
 
 // Test is the main struct containing the test data
 type Test struct {
-	PlanData     []byte
-	LoopControl  LoopControl
-	ResourcesSet ResourceSet
+	PlanData    []byte
+	LoopControl LoopControl
+	Resources   ResourceSet
 }
 
 // CompDiff is a struct containing slice of CompDiffItem
@@ -47,7 +47,7 @@ type ResourceSet struct {
 func ReadPlan(planPath string) (*Test, error) {
 	tf := &Test{
 		LoopControl: LoopControl{MaxDepth: 10},
-		ResourcesSet: ResourceSet{
+		Resources: ResourceSet{
 			Items:    map[string]map[string]map[string]gjson.Result{},
 			CompDiff: CompDiff{},
 		},
@@ -142,9 +142,9 @@ func (rs *ResourceSet) Contains(r Resource) bool {
 	return true
 }
 
-func (resourceSet ResourceSet) Diff() string {
+func (rs ResourceSet) Diff() string {
 	var stringDiff string
-	for _, diff := range resourceSet.CompDiff.Items {
+	for _, diff := range rs.CompDiff.Items {
 		stringDiff += fmt.Sprintf("key %q: want %q, got %q\n", diff.Key, diff.Want, diff.Got)
 	}
 	return stringDiff
@@ -153,10 +153,10 @@ func (resourceSet ResourceSet) Diff() string {
 // ResourceSet transform the multi level json into one big object to make queries easier
 func (tfPlan *Test) ResourceSet() {
 	rootModule := gjson.GetBytes(tfPlan.PlanData, `planned_values.root_module|@pretty:{"sortKeys":true}`)
-	rootModule.ForEach(tfPlan.resourceSet)
+	rootModule.ForEach(tfPlan.transform)
 }
 
-func (tfPlan *Test) resourceSet(key, value gjson.Result) bool {
+func (tfPlan *Test) transform(key, value gjson.Result) bool {
 	if tfPlan.LoopControl.CurDepth > tfPlan.LoopControl.MaxDepth {
 		fmt.Println("MaxDepth reached")
 		return false
@@ -167,90 +167,39 @@ func (tfPlan *Test) resourceSet(key, value gjson.Result) bool {
 		tfPlan.LoopControl.PrevItemIndex = "resources"
 		tfPlan.LoopControl.CurDepth++
 		for _, child := range value.Array() {
-			child.ForEach(tfPlan.resourceSet)
+			child.ForEach(tfPlan.transform)
 		}
 	case "child_modules":
 		tfPlan.LoopControl.PrevItemIndex = "child_modules"
 		tfPlan.LoopControl.CurDepth++
 		for _, child := range value.Array() {
-			child.ForEach(tfPlan.resourceSet)
+			child.ForEach(tfPlan.transform)
 		}
 	case "values":
 		tfPlan.LoopControl.CurItemSubKey = "Values"
-		_, ok := tfPlan.ResourcesSet.Items[tfPlan.LoopControl.CurItemIndex]
+		_, ok := tfPlan.Resources.Items[tfPlan.LoopControl.CurItemIndex]
 		if !ok {
-			tfPlan.ResourcesSet.Items[tfPlan.LoopControl.CurItemIndex] = map[string]map[string]gjson.Result{}
+			tfPlan.Resources.Items[tfPlan.LoopControl.CurItemIndex] = map[string]map[string]gjson.Result{}
 		}
-		tfPlan.ResourcesSet.Items[tfPlan.LoopControl.CurItemIndex][tfPlan.LoopControl.CurItemSubKey] = map[string]gjson.Result{}
-		value.ForEach(tfPlan.resourceSet)
+		tfPlan.Resources.Items[tfPlan.LoopControl.CurItemIndex][tfPlan.LoopControl.CurItemSubKey] = map[string]gjson.Result{}
+		value.ForEach(tfPlan.transform)
 	case "address":
-		// We are only interested in resources address
+		// We are only interested in addresses of resources
 		if tfPlan.LoopControl.PrevItemIndex != "resources" {
 			break
 		}
 		tfPlan.LoopControl.CurItemSubKey = "Metadata"
 		tfPlan.LoopControl.CurItemIndex = value.String()
-		_, ok := tfPlan.ResourcesSet.Items[tfPlan.LoopControl.CurItemIndex]
+		_, ok := tfPlan.Resources.Items[tfPlan.LoopControl.CurItemIndex]
 		if !ok {
-			tfPlan.ResourcesSet.Items[tfPlan.LoopControl.CurItemIndex] = map[string]map[string]gjson.Result{}
+			tfPlan.Resources.Items[tfPlan.LoopControl.CurItemIndex] = map[string]map[string]gjson.Result{}
 		}
-		tfPlan.ResourcesSet.Items[tfPlan.LoopControl.CurItemIndex][tfPlan.LoopControl.CurItemSubKey] = map[string]gjson.Result{}
+		tfPlan.Resources.Items[tfPlan.LoopControl.CurItemIndex][tfPlan.LoopControl.CurItemSubKey] = map[string]gjson.Result{}
 
 	default:
-		tfPlan.ResourcesSet.Items[tfPlan.LoopControl.CurItemIndex][tfPlan.LoopControl.CurItemSubKey][key.String()] = value
-		//fmt.Printf("Add key %v and value %v into %v into %v\n\n", key, value, tfPlan.LoopControl.CurItemIndex, tfPlan.LoopControl.CurItemSubKey)
+		tfPlan.Resources.Items[tfPlan.LoopControl.CurItemIndex][tfPlan.LoopControl.CurItemSubKey][key.String()] = value
+		fmt.Printf("Add key %v and value %v into %v into %v\n\n", key, value, tfPlan.LoopControl.CurItemIndex, tfPlan.LoopControl.CurItemSubKey)
 	}
 
 	return true
-}
-
-// Equal evaluate TFTest and TFResource and returns the diff and if it is equal
-// or not.
-// func Equal(tfTestResource TFTestResource, tfPlan TFTest) (TFDiff, bool) {
-// 	tfDiff := TFDiff{}
-// 	resource, ok := tfPlan.ResourcesSet["Metadata"][tfTestResource.Address]
-// 	if !ok {
-// 		item := TFCompDiffItem{
-// 			Got:  "does not exist",
-// 			Key:  tfTestResource.Address,
-// 			Want: "exist",
-// 		}
-// 		tfDiff.Items = append(tfDiff.Items, item)
-
-// 		return tfDiff, false
-// 	}
-// 	for k, v := range tfTestResource.Metadata {
-// 		value, ok := resource[k]
-// 		if !ok {
-// 			item := TFDiffItem{
-// 				Got:  "",
-// 				Key:  k,
-// 				Want: v,
-// 			}
-// 			tfDiff.Items = append(tfDiff.Items, item)
-
-// 			return tfDiff, false
-// 		}
-// 		if value.String() != v {
-// 			item := TFDiffItem{
-// 				Got:  value.String(),
-// 				Key:  k,
-// 				Want: v,
-// 			}
-// 			tfDiff.Items = append(tfDiff.Items, item)
-
-// 			return tfDiff, false
-// 		}
-// 	}
-
-// 	return tfDiff, true
-// }
-
-// Diff returns all diffs in a string concanated by new line
-func Diff(tfDiff CompDiff) string {
-	var stringDiff string
-	for _, diff := range tfDiff.Items {
-		stringDiff += fmt.Sprintf("key %q: want %q, got %q\n", diff.Key, diff.Want, diff.Got)
-	}
-	return stringDiff
 }
