@@ -70,78 +70,6 @@ func ReadPlan(planPath string) (*Test, error) {
 	return tf, nil
 }
 
-func (rs *ResourceSet) Contains(r Resource) bool {
-	metadata, ok := rs.Items[r.Address]["Metadata"]
-	if !ok {
-		item := CompDiffItem{
-			Got:  "does not exist",
-			Key:  r.Address,
-			Want: "exist",
-		}
-		rs.CompDiff.Items = append(rs.CompDiff.Items, item)
-
-		return false
-	}
-	for k, v := range r.Metadata {
-		valueFound, ok := metadata[k]
-		if !ok {
-			item := CompDiffItem{
-				Got:  "",
-				Key:  k,
-				Want: v,
-			}
-			rs.CompDiff.Items = append(rs.CompDiff.Items, item)
-			return false
-		}
-		if valueFound.String() != v {
-			item := CompDiffItem{
-				Got:  valueFound.String(),
-				Key:  k,
-				Want: v,
-			}
-			rs.CompDiff.Items = append(rs.CompDiff.Items, item)
-			return false
-		}
-	}
-
-	values, ok := rs.Items[r.Address]["Values"]
-	if !ok {
-		item := CompDiffItem{
-			Got:  "does not exist",
-			Key:  r.Address,
-			Want: "exist",
-		}
-		rs.CompDiff.Items = append(rs.CompDiff.Items, item)
-
-		return false
-	}
-	for k, v := range r.Values {
-		valueFound, ok := values[k]
-		if !ok {
-			item := CompDiffItem{
-				Got:  "",
-				Key:  k,
-				Want: v,
-			}
-			rs.CompDiff.Items = append(rs.CompDiff.Items, item)
-
-			return false
-		}
-		if valueFound.String() != v {
-			item := CompDiffItem{
-				Got:  valueFound.String(),
-				Key:  k,
-				Want: v,
-			}
-			rs.CompDiff.Items = append(rs.CompDiff.Items, item)
-
-			return false
-		}
-	}
-
-	return true
-}
-
 func (rs ResourceSet) Diff() string {
 	var stringDiff string
 	for _, diff := range rs.CompDiff.Items {
@@ -204,21 +132,141 @@ func (tfPlan *Test) transform(key, value gjson.Result) bool {
 	return true
 }
 
+func (rs *ResourceSet) Contains(r Resource) bool {
+	metadata, ok := rs.Items[r.Address]["Metadata"]
+	if !ok {
+		item := CompDiffItem{
+			Got:  "nil",
+			Key:  r.Address,
+			Want: "exist",
+		}
+		rs.CompDiff.Items = append(rs.CompDiff.Items, item)
+
+		return false
+	}
+	for k, v := range r.Metadata {
+		valueFound, ok := metadata[k]
+		if !ok {
+			item := CompDiffItem{
+				Got:  "",
+				Key:  k,
+				Want: v,
+			}
+			rs.CompDiff.Items = append(rs.CompDiff.Items, item)
+			return false
+		}
+		if valueFound.String() != v {
+			item := CompDiffItem{
+				Got:  valueFound.String(),
+				Key:  k,
+				Want: v,
+			}
+			rs.CompDiff.Items = append(rs.CompDiff.Items, item)
+			return false
+		}
+	}
+
+	values, ok := rs.Items[r.Address]["Values"]
+	if !ok {
+		item := CompDiffItem{
+			Got:  "nil",
+			Key:  r.Address,
+			Want: "exist",
+		}
+		rs.CompDiff.Items = append(rs.CompDiff.Items, item)
+
+		return false
+	}
+	for k, v := range r.Values {
+		valueFound, ok := values[k]
+		if !ok {
+			item := CompDiffItem{
+				Got:  "nil",
+				Key:  k,
+				Want: v,
+			}
+			rs.CompDiff.Items = append(rs.CompDiff.Items, item)
+
+			return false
+		}
+		if valueFound.String() != v {
+			item := CompDiffItem{
+				Got:  valueFound.String(),
+				Key:  k,
+				Want: v,
+			}
+			rs.CompDiff.Items = append(rs.CompDiff.Items, item)
+
+			return false
+		}
+	}
+
+	return true
+}
+
 func Equal(resources []Resource, rs *ResourceSet) bool {
 	equal := true
 	resourcesRS := map[string]struct{}{}
 
 	for _, r := range resources {
 		resourcesRS[r.Address] = struct{}{}
-		_, ok := rs.Items[r.Address]
+		rsItem, ok := rs.Items[r.Address]
 		if !ok {
 			item := CompDiffItem{
-				Got:  "does not exist",
+				Got:  "nil",
 				Key:  r.Address,
 				Want: "exist in plan",
 			}
 			rs.CompDiff.Items = append(rs.CompDiff.Items, item)
 			equal = false
+		}
+
+		for k, v := range r.Metadata {
+			valueFound, ok := rsItem["Metadata"][k]
+			if !ok {
+				item := CompDiffItem{
+					Got:  "nil",
+					Key:  r.Address,
+					Want: "exist in plan",
+				}
+				rs.CompDiff.Items = append(rs.CompDiff.Items, item)
+				equal = false
+				continue
+			}
+			if valueFound.String() != v {
+				item := CompDiffItem{
+					Got:  valueFound.String(),
+					Key:  k,
+					Want: v,
+				}
+				rs.CompDiff.Items = append(rs.CompDiff.Items, item)
+				equal = false
+			}
+		}
+
+		for k, v := range r.Values {
+			valueFound, ok := rsItem["Values"][k]
+			if !ok {
+				item := CompDiffItem{
+					Got:  "nil",
+					Key:  r.Address,
+					Want: "exist in plan",
+				}
+				rs.CompDiff.Items = append(rs.CompDiff.Items, item)
+				equal = false
+				continue
+			}
+			if valueFound.String() != v {
+				item := CompDiffItem{
+					Got:  valueFound.String(),
+					Key:  k,
+					Want: v,
+				}
+				rs.CompDiff.Items = append(rs.CompDiff.Items, item)
+				equal = false
+			}
+			// fmt.Println("KEY", k, "VALUE", v, "found", valueFound)
+			// os.Exit(1)
 		}
 	}
 
@@ -226,7 +274,7 @@ func Equal(resources []Resource, rs *ResourceSet) bool {
 		_, ok := resourcesRS[k]
 		if !ok {
 			item := CompDiffItem{
-				Got:  "does not exist",
+				Got:  "nil",
 				Key:  k,
 				Want: "exist in resources",
 			}
