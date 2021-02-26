@@ -55,7 +55,7 @@ func ReadPlan(planPath string) (*Test, error) {
 
 	f, err := os.Open(planPath)
 	if err != nil {
-		return tf, fmt.Errorf("cannot open file: %s", planPath)
+		return tf, fmt.Errorf("cannot open file %s: %v", planPath, err)
 	}
 	defer f.Close()
 
@@ -205,9 +205,7 @@ func (rs *ResourceSet) Contains(r Resource) bool {
 }
 
 func Equal(resources []Resource, rs *ResourceSet) bool {
-	equal := true
 	resourcesRS := map[string]struct{}{}
-
 	for _, r := range resources {
 		resourcesRS[r.Address] = struct{}{}
 		rsItem, ok := rs.Items[r.Address]
@@ -218,7 +216,7 @@ func Equal(resources []Resource, rs *ResourceSet) bool {
 				Want: "exist in plan",
 			}
 			rs.CompDiff.Items = append(rs.CompDiff.Items, item)
-			equal = false
+			return false
 		}
 
 		for k, v := range r.Metadata {
@@ -230,8 +228,7 @@ func Equal(resources []Resource, rs *ResourceSet) bool {
 					Want: "exist in plan",
 				}
 				rs.CompDiff.Items = append(rs.CompDiff.Items, item)
-				equal = false
-				continue
+				return false
 			}
 			if valueFound.String() != v {
 				item := CompDiffItem{
@@ -240,7 +237,7 @@ func Equal(resources []Resource, rs *ResourceSet) bool {
 					Want: v,
 				}
 				rs.CompDiff.Items = append(rs.CompDiff.Items, item)
-				equal = false
+				return false
 			}
 		}
 
@@ -253,8 +250,7 @@ func Equal(resources []Resource, rs *ResourceSet) bool {
 					Want: "exist in plan",
 				}
 				rs.CompDiff.Items = append(rs.CompDiff.Items, item)
-				equal = false
-				continue
+				return false
 			}
 			if valueFound.String() != v {
 				item := CompDiffItem{
@@ -263,7 +259,7 @@ func Equal(resources []Resource, rs *ResourceSet) bool {
 					Want: v,
 				}
 				rs.CompDiff.Items = append(rs.CompDiff.Items, item)
-				equal = false
+				return false
 			}
 		}
 	}
@@ -277,8 +273,8 @@ func Equal(resources []Resource, rs *ResourceSet) bool {
 				Want: "exist in resources",
 			}
 			rs.CompDiff.Items = append(rs.CompDiff.Items, item)
-			equal = false
+			return false
 		}
 	}
-	return equal
+	return true
 }

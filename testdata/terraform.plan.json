@@ -28,9 +28,7 @@
               "provider_name": "registry.terraform.io/hashicorp/nomad",
               "schema_version": 0,
               "values": {
-                "datacenters": [
-                  "dc1"
-                ],
+                "datacenters": ["dc1"],
                 "deregister_on_destroy": true,
                 "deregister_on_id_change": true,
                 "detach": true,
@@ -78,14 +76,10 @@
       "name": "test_job",
       "provider_name": "registry.terraform.io/hashicorp/nomad",
       "change": {
-        "actions": [
-          "create"
-        ],
+        "actions": ["create"],
         "before": null,
         "after": {
-          "datacenters": [
-            "dc1"
-          ],
+          "datacenters": ["dc1"],
           "deregister_on_destroy": true,
           "deregister_on_id_change": true,
           "detach": true,
@@ -119,14 +113,10 @@
         },
         "after_unknown": {
           "allocation_ids": true,
-          "datacenters": [
-            false
-          ],
+          "datacenters": [false],
           "deployment_id": true,
           "deployment_status": true,
-          "hcl2": [
-            {}
-          ],
+          "hcl2": [{}],
           "id": true,
           "modify_index": true,
           "region": true,
@@ -151,9 +141,7 @@
         "module_address": "module.nomad_job",
         "expressions": {
           "address": {
-            "references": [
-              "var.nomad_addr"
-            ]
+            "references": ["var.nomad_addr"]
           }
         }
       },
@@ -161,9 +149,7 @@
         "name": "nomad",
         "expressions": {
           "address": {
-            "references": [
-              "var.nomad_addr"
-            ]
+            "references": ["var.nomad_addr"]
           }
         }
       }
@@ -174,24 +160,16 @@
           "source": "../../",
           "expressions": {
             "job_count": {
-              "references": [
-                "var.job_count"
-              ]
+              "references": ["var.job_count"]
             },
             "job_name": {
-              "references": [
-                "var.job_name"
-              ]
+              "references": ["var.job_name"]
             },
             "nomad_addr": {
-              "references": [
-                "var.nomad_addr"
-              ]
+              "references": ["var.nomad_addr"]
             },
             "template_name": {
-              "references": [
-                "var.template_name"
-              ]
+              "references": ["var.template_name"]
             }
           },
           "module": {

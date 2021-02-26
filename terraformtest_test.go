@@ -8,7 +8,7 @@ import (
 func TestReadPlanFile(t *testing.T) {
 	t.Parallel()
 
-	wantLen := 9028
+	wantLen := 8716
 	p, err := terraformtest.ReadPlan("testdata/terraform.plan.json")
 	if err != nil {
 		t.Fatal(err)
@@ -22,9 +22,9 @@ func TestReadPlanFile(t *testing.T) {
 func TestNumberResources(t *testing.T) {
 	t.Parallel()
 
-	wantNumResources := 1
+	wantNumResources := 40
 
-	p, err := terraformtest.ReadPlan("testdata/terraform.plan.json")
+	p, err := terraformtest.ReadPlan("testdata/terraform-aws-101.plan.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,5 +86,55 @@ func TestContains(t *testing.T) {
 
 	if !gotRS.Contains(wantRS) {
 		t.Error(gotRS.Diff())
+	}
+}
+
+func TestContainsResource(t *testing.T) {
+	testCases := []struct {
+		desc, planJSONPath string
+		wantResource       terraformtest.Resource
+	}{
+		{
+			desc:         "Test EIP",
+			planJSONPath: "testdata/terraform-aws-101.plan.json",
+			wantResource: terraformtest.Resource{
+				Address: "module.vpc.aws_eip.nat[0]",
+				Metadata: map[string]string{
+					"type": "aws_eip",
+					"name": "nat",
+				},
+				Values: map[string]string{
+					"vpc":      "true",
+					"timeouts": "",
+				},
+			},
+		},
+		{
+			desc:         "Test DB Subnet Group",
+			planJSONPath: "testdata/terraform-aws-101.plan.json",
+			wantResource: terraformtest.Resource{
+				Address: "module.db.module.db_subnet_group.aws_db_subnet_group.this[0]",
+				Metadata: map[string]string{
+					"type": "aws_db_subnet_group",
+					"name": "this",
+				},
+				Values: map[string]string{
+					"name_prefix": "demodb-",
+				},
+			},
+		},
+	}
+
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			p, err := terraformtest.ReadPlan(tC.planJSONPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			gotRS := p.Resources
+			if !gotRS.Contains(tC.wantResource) {
+				t.Error(gotRS.Diff())
+			}
+		})
 	}
 }
