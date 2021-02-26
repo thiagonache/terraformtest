@@ -63,32 +63,6 @@ func TestEqual(t *testing.T) {
 	}
 }
 
-func TestContains(t *testing.T) {
-	t.Parallel()
-
-	wantRS := terraformtest.Resource{
-		Address: "module.vpc.aws_eip.nat[0]",
-		Metadata: map[string]string{
-			"type": "aws_eip",
-			"name": "nat",
-		},
-		Values: map[string]string{
-			"vpc":      "true",
-			"timeouts": "",
-		},
-	}
-
-	p, err := terraformtest.ReadPlan("testdata/terraform-aws-101.plan.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	gotRS := p.Resources
-
-	if !gotRS.Contains(wantRS) {
-		t.Error(gotRS.Diff())
-	}
-}
-
 func TestContainsResource(t *testing.T) {
 	testCases := []struct {
 		desc, planJSONPath string
