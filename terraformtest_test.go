@@ -3,6 +3,8 @@ package terraformtest_test
 import (
 	"terraformtest"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestReadPlanFile(t *testing.T) {
@@ -28,7 +30,7 @@ func TestNumberResources(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	items := p.Resources.Items
+	items := p.Resources.Resources
 
 	if len(items) != wantNumResources {
 		t.Errorf("want %d resources in plan, got %d", wantNumResources, len(items))
@@ -109,6 +111,81 @@ func TestContainsResource(t *testing.T) {
 			if !gotRS.Contains(tC.wantResource) {
 				t.Error(gotRS.Diff())
 			}
+		})
+	}
+}
+
+func TestDiffExpected(t *testing.T) {
+	testCases := []struct {
+		desc, planJSONPath, wantDiff string
+		resource                     terraformtest.Resource
+	}{
+		{
+			desc:         "Test address doesn't exist",
+			planJSONPath: "testdata/terraform-aws-101.plan.json",
+			resource: terraformtest.Resource{
+				Address: "module.vpc.aws_eip.nat[3]",
+			},
+			wantDiff: `key "module.vpc.aws_eip.nat[3]": want "exist", got "nil"\n`,
+		},
+		{
+			desc:         "Test metadata doesn't exist",
+			planJSONPath: "testdata/terraform-aws-101.plan.json",
+			resource: terraformtest.Resource{
+				Address: "module.vpc.aws_eip.nat[0]",
+				Metadata: map[string]string{
+					"typee": "aws_eip",
+				},
+			},
+			wantDiff: `key "typee": want "exist", got "nil"\n`,
+		},
+		{
+			desc:         "Test metadata wrong value",
+			planJSONPath: "testdata/terraform-aws-101.plan.json",
+			resource: terraformtest.Resource{
+				Address: "module.vpc.aws_eip.nat[0]",
+				Metadata: map[string]string{
+					"type": "aws_db_subnet_group",
+				},
+			},
+			wantDiff: `key "type": want "aws_db_subnet_group", got "aws_eip"\n`,
+		},
+		{
+			desc:         "Test value does not exist",
+			planJSONPath: "testdata/terraform-aws-101.plan.json",
+			resource: terraformtest.Resource{
+				Address: "module.vpc.aws_eip.nat[0]",
+				Values: map[string]string{
+					"abc": "xpto",
+				},
+			},
+			wantDiff: `key "abc": want "exist", got "nil"\n`,
+		},
+		{
+			desc:         "Test wrong value",
+			planJSONPath: "testdata/terraform-aws-101.plan.json",
+			resource: terraformtest.Resource{
+				Address: "module.vpc.aws_eip.nat[0]",
+				Values: map[string]string{
+					"vpc": "false",
+				},
+			},
+			wantDiff: `key "vpc": want "false", got "true"\n`,
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			p, err := terraformtest.ReadPlan(tC.planJSONPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			gotRS := p.Resources
+			gotRS.Contains(tC.resource)
+			gotDiff := gotRS.Diff()
+			if !cmp.Equal(tC.wantDiff, gotDiff) {
+				t.Error(cmp.Diff(tC.wantDiff, gotDiff))
+			}
+
 		})
 	}
 }
