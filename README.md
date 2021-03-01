@@ -4,14 +4,17 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/thiagonache/terraformtest)](https://goreportcard.com/report/github.com/thiagonache/terraformtest)
 
 ## Import
+
 ```go
 import "github.com/thiagonache/terraformtest"
 ```
 
 ## Summary
+
 Terraformtest is a lightweight terraform tester written in Go for unit and integration tests.
 
 ### Features
+
 - Remove code paperwork to write tests.
 - No JSON query required for testing resources.
 - Terraform resources are abstract in a Go generic struct.
@@ -30,14 +33,20 @@ func TestContainsResource(t *testing.T) {
         wantResource       terraformtest.Resource
     }{
         {
+            // Test description
             desc:         "Test EIP",
+            // Path for Terraform plan with resources to be tested in JSON format.
             planJSONPath: "testdata/terraform-aws-101.plan.json",
             wantResource: terraformtest.Resource{
+                // Resource address as show in the output of terraform plan command.
                 Address: "module.vpc.aws_eip.nat[0]",
+                // Metadata represents the resource type and the resource name in the resource declaration.
+                // Eg.: resource "aws_eip" "nat" {
                 Metadata: map[string]string{
                     "type": "aws_eip",
                     "name": "nat",
                 },
+                // Values are the resources key => value. Anything inside of the planned_values in the JSON file.
                 Values: map[string]string{
                     "vpc":      "true",
                     "timeouts": "",
@@ -62,26 +71,36 @@ func TestContainsResource(t *testing.T) {
 
     for _, tC := range testCases {
         t.Run(tC.desc, func(t *testing.T) {
+            // Read the Terraform JSON plan file
             p, err := terraformtest.ReadPlan(tC.planJSONPath)
             if err != nil {
                 t.Fatal(err)
             }
+            // Get the resourceSet (map of resources in the plan)
             gotRS := p.Resources
+            // Test if the resource wanted is present in the plan
             if !gotRS.Contains(tC.wantResource) {
+                // If does not contain, output the diff
                 t.Error(gotRS.Diff())
             }
         })
     }
 
+    // Set the total number of resources the plan must have
     wantNumResources := 40
     items := p.Resources.Resources
 
+    // Test if number of resources in the plan is equal to number of resources wanted
     if len(items) != wantNumResources {
         t.Errorf("want %d resources in plan, got %d", wantNumResources, len(items))
     }
 ```
 
 ### Test if plan is equal (have all the resources wanted)
+
+The difference between Contains and Equal is that Equal requires all resources
+to be declared in the slice of wanted Resource. If there's one item in the plan
+that doesn't exist in the resourceSet or vice-versa it fails.
 
 ```go
 func TestEqual(t *testing.T) {

@@ -1,8 +1,9 @@
 package terraformtest_test
 
 import (
-	"terraformtest"
 	"testing"
+
+	"terraformtest"
 
 	"github.com/google/go-cmp/cmp"
 )
