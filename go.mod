@@ -1,4 +1,4 @@
-module terraformtest
+module github.com/thiagonache/terraformtest
 
 go 1.15
 

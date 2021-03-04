@@ -1,139 +1,191 @@
 package terraformtest_test
 
 import (
-	"terraformtest"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/tidwall/gjson"
+	"github.com/thiagonache/terraformtest"
 )
 
 func TestReadPlanFile(t *testing.T) {
 	t.Parallel()
 
-	want := 9028
-	tfPlan, err := terraformtest.NewTerraformTest("testdata/terraform.tfplan")
+	wantLen := 8716
+	p, err := terraformtest.ReadPlan("testdata/terraform.plan.json")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if want != len(tfPlan.Data) {
-		t.Errorf("want json size in bytes of %d but got %d", want, len(tfPlan.Data))
+	if wantLen != len(p.Data) {
+		t.Errorf("want json size in bytes of %d but got %d", wantLen, len(p.Data))
 	}
 }
 
-func TestCoalescePlan(t *testing.T) {
+func TestNumberResources(t *testing.T) {
 	t.Parallel()
-	tfPlan := terraformtest.TFPlan{
-		MaxDepth: 10,
-	}
-	want := make(map[string]map[string]gjson.Result)
-	want["abc"] = make(map[string]gjson.Result)
-	want["abc"]["name"] = gjson.Result{
-		Type:  gjson.String,
-		Raw:   `"bogus"`,
-		Str:   "bogus",
-		Num:   0,
-		Index: 0,
-	}
 
-	data := []byte(`{
-		"planned_values": {
-		  "root_module": {
-			"child_modules": [
-			  {
-				"resources": [
-				  {
-					"name": "bogus"
-					"address": "abc",
-				  }
-				],
-				"address": "module.my_module"
-			  }
-			]
-		  }
-		}
-	  }
-	  `)
-	rootModule := gjson.GetBytes(data, `planned_values.root_module|@pretty:{"sortKeys":true}`)
-	for k, v := range rootModule.Map() {
-		terraformtest.CoalescePlan(&tfPlan, k, v)
-	}
-	got := tfPlan.Items
-	if !cmp.Equal(want, got) {
-		t.Errorf(cmp.Diff(want, got))
-	}
+	wantNumResources := 40
 
+	p, err := terraformtest.ReadPlan("testdata/terraform-aws-101.plan.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	items := p.Resources.Resources
+
+	if len(items) != wantNumResources {
+		t.Errorf("want %d resources in plan, got %d", wantNumResources, len(items))
+	}
 }
+
 func TestEqual(t *testing.T) {
 	t.Parallel()
 
-	want := terraformtest.TFTestResource{
-		Filter: `planned_values.root_module.child_modules.#.resources`,
-		Check: map[string]string{
-			"0.0.address":              "module.nomad_job.nomad_job.test_job",
-			"0.0.type":                 "nomad_job",
-			"0.0.values.name":          "unit-test",
-			"0.0.values.datacenters.0": "dc1",
+	wantRS := []terraformtest.Resource{
+		{
+			Address: "module.nomad_job.nomad_job.test_job",
+			Metadata: map[string]string{
+				"type": "nomad_job",
+				"name": "test_job",
+			},
+			Values: map[string]string{
+				"name":        "unit-test",
+				"datacenters": `["dc1"]`,
+			},
 		},
 	}
-	got, err := terraformtest.NewTerraformTest("testdata/terraform.tfplan")
-	if err != nil {
-		t.Fatalf("cannot read terraform plan: %v", err)
-	}
 
-	tfDiff, equal := terraformtest.Equal(want, *got)
-	if !equal {
-		t.Error(terraformtest.Diff(tfDiff))
+	p, err := terraformtest.ReadPlan("testdata/terraform.plan.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	gotRS := p.Resources
+
+	if !terraformtest.Equal(wantRS, &gotRS) {
+		t.Error(gotRS.Diff())
 	}
 }
 
-func TestTFAWS101NatEIPOne(t *testing.T) {
-	t.Parallel()
-
-	want := terraformtest.TFTestResource{
-		Filter: `planned_values.root_module.child_modules.#.resources`,
-		Check: map[string]string{
-			"0.0.address":               "module.vpc.aws_eip.nat[0]",
-			"0.0.type":                  "aws_eip",
-			"0.0.values.vpc":            "true",
-			"0.0.values.tags.Terraform": "true",
-			"0.0.values.timeouts":       "",
+func TestContainsResource(t *testing.T) {
+	testCases := []struct {
+		desc, planJSONPath string
+		wantResource       terraformtest.Resource
+	}{
+		{
+			desc:         "Test EIP",
+			planJSONPath: "testdata/terraform-aws-101.plan.json",
+			wantResource: terraformtest.Resource{
+				Address: "module.vpc.aws_eip.nat[0]",
+				Metadata: map[string]string{
+					"type": "aws_eip",
+					"name": "nat",
+				},
+				Values: map[string]string{
+					"vpc":      "true",
+					"timeouts": "",
+				},
+			},
+		},
+		{
+			desc:         "Test DB Subnet Group",
+			planJSONPath: "testdata/terraform-aws-101.plan.json",
+			wantResource: terraformtest.Resource{
+				Address: "module.db.module.db_subnet_group.aws_db_subnet_group.this[0]",
+				Metadata: map[string]string{
+					"type": "aws_db_subnet_group",
+					"name": "this",
+				},
+				Values: map[string]string{
+					"name_prefix": "demodb-",
+				},
+			},
 		},
 	}
 
-	got, err := terraformtest.NewTerraformTest("testdata/terraform-aws-101.tfplan.json")
-	if err != nil {
-		t.Fatalf("cannot read terraform plan: %v", err)
-	}
-
-	tfDiff, equal := terraformtest.Equal(want, *got)
-	if !equal {
-		t.Error(terraformtest.Diff(tfDiff))
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			p, err := terraformtest.ReadPlan(tC.planJSONPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			gotRS := p.Resources
+			if !gotRS.Contains(tC.wantResource) {
+				t.Error(gotRS.Diff())
+			}
+		})
 	}
 }
 
-func TestTFAWS101DBOptionGroup(t *testing.T) {
-	t.Parallel()
-
-	want := terraformtest.TFTestResource{
-		Filter: `planned_values.root_module.child_modules.#.child_modules.#.resources`,
-		Check: map[string]string{
-			"0.0.0.address":                     "module.db.module.db_option_group.aws_db_option_group.this[0]",
-			"0.0.0.type":                        "aws_db_option_group",
-			"0.0.0.values.engine_name":          "mysql",
-			"0.0.0.values.major_engine_version": "5.7",
-			"0.0.0.values.option.0.option_name": "MARIADB_AUDIT_PLUGIN",
+func TestDiffExpected(t *testing.T) {
+	testCases := []struct {
+		desc, planJSONPath, wantDiff string
+		resource                     terraformtest.Resource
+	}{
+		{
+			desc:         "Test address doesn't exist",
+			planJSONPath: "testdata/terraform-aws-101.plan.json",
+			resource: terraformtest.Resource{
+				Address: "module.vpc.aws_eip.nat[3]",
+			},
+			wantDiff: `key "module.vpc.aws_eip.nat[3]": want "exist", got "nil"\n`,
+		},
+		{
+			desc:         "Test metadata doesn't exist",
+			planJSONPath: "testdata/terraform-aws-101.plan.json",
+			resource: terraformtest.Resource{
+				Address: "module.vpc.aws_eip.nat[0]",
+				Metadata: map[string]string{
+					"typee": "aws_eip",
+				},
+			},
+			wantDiff: `key "typee": want "exist", got "nil"\n`,
+		},
+		{
+			desc:         "Test metadata wrong value",
+			planJSONPath: "testdata/terraform-aws-101.plan.json",
+			resource: terraformtest.Resource{
+				Address: "module.vpc.aws_eip.nat[0]",
+				Metadata: map[string]string{
+					"type": "aws_db_subnet_group",
+				},
+			},
+			wantDiff: `key "type": want "aws_db_subnet_group", got "aws_eip"\n`,
+		},
+		{
+			desc:         "Test value does not exist",
+			planJSONPath: "testdata/terraform-aws-101.plan.json",
+			resource: terraformtest.Resource{
+				Address: "module.vpc.aws_eip.nat[0]",
+				Values: map[string]string{
+					"abc": "xpto",
+				},
+			},
+			wantDiff: `key "abc": want "exist", got "nil"\n`,
+		},
+		{
+			desc:         "Test wrong value",
+			planJSONPath: "testdata/terraform-aws-101.plan.json",
+			resource: terraformtest.Resource{
+				Address: "module.vpc.aws_eip.nat[0]",
+				Values: map[string]string{
+					"vpc": "false",
+				},
+			},
+			wantDiff: `key "vpc": want "false", got "true"\n`,
 		},
 	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			p, err := terraformtest.ReadPlan(tC.planJSONPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			gotRS := p.Resources
+			gotRS.Contains(tC.resource)
+			gotDiff := gotRS.Diff()
+			if !cmp.Equal(tC.wantDiff, gotDiff) {
+				t.Error(cmp.Diff(tC.wantDiff, gotDiff))
+			}
 
-	got, err := terraformtest.NewTerraformTest("testdata/terraform-aws-101.tfplan.json")
-	if err != nil {
-		t.Fatalf("cannot read terraform plan: %v", err)
-	}
-
-	tfDiff, equal := terraformtest.Equal(want, *got)
-	if !equal {
-		t.Error(terraformtest.Diff(tfDiff))
+		})
 	}
 }
