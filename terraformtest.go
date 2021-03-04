@@ -8,7 +8,6 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-// loopControl is a struct containing items to control for loop to process json file
 type loopControl struct {
 	curDepth, maxDepth          int
 	curItemIndex, curItemSubKey string
@@ -17,17 +16,15 @@ type loopControl struct {
 
 // Plan is the main struct containing the Plan data
 type Plan struct {
-	Data    []byte
+	Data        []byte
 	loopControl loopControl
 	Resources   ResourceSet
 }
 
-// compDiff is a struct containing slice of CompDiffItem
 type compDiff struct {
 	items []compDiffItem
 }
 
-// compDiffItem is a struct containing got, key and want values for the diff
 type compDiffItem struct {
 	got, key, want string
 }
@@ -46,7 +43,7 @@ type ResourceSet struct {
 }
 
 // ReadPlan takes the plan's file path in JSON format and returns a pointer to a
-// Test object and an error.
+// Plan object and an error.
 func ReadPlan(planPath string) (*Plan, error) {
 	tf := &Plan{
 		loopControl: loopControl{maxDepth: 10},

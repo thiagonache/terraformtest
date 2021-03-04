@@ -3,9 +3,8 @@ package terraformtest_test
 import (
 	"testing"
 
-	"terraformtest"
-
 	"github.com/google/go-cmp/cmp"
+	"github.com/thiagonache/terraformtest"
 )
 
 func TestReadPlanFile(t *testing.T) {
