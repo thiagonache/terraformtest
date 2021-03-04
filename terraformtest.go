@@ -83,12 +83,10 @@ func (rs ResourceSet) Diff() string {
 // queries easier.
 func (tfPlan *Plan) ResourceSet() {
 	rootModule := gjson.GetBytes(tfPlan.Data, `planned_values.root_module|@pretty:{"sortKeys":true}`)
-	rootModule.ForEach(tfPlan.Transform)
+	rootModule.ForEach(tfPlan.transform)
 }
 
-// Transform iterates over TF Plan in JSON format to produce a single level map
-// of resources.
-func (tfPlan *Plan) Transform(key, value gjson.Result) bool {
+func (tfPlan *Plan) transform(key, value gjson.Result) bool {
 	if tfPlan.loopControl.curDepth > tfPlan.loopControl.maxDepth {
 		fmt.Println("MaxDepth reached")
 		return false
@@ -99,13 +97,13 @@ func (tfPlan *Plan) Transform(key, value gjson.Result) bool {
 		tfPlan.loopControl.prevItemIndex = "resources"
 		tfPlan.loopControl.curDepth++
 		for _, child := range value.Array() {
-			child.ForEach(tfPlan.Transform)
+			child.ForEach(tfPlan.transform)
 		}
 	case "child_modules":
 		tfPlan.loopControl.prevItemIndex = "child_modules"
 		tfPlan.loopControl.curDepth++
 		for _, child := range value.Array() {
-			child.ForEach(tfPlan.Transform)
+			child.ForEach(tfPlan.transform)
 		}
 	case "values":
 		tfPlan.loopControl.curItemSubKey = "Values"
@@ -114,7 +112,7 @@ func (tfPlan *Plan) Transform(key, value gjson.Result) bool {
 			tfPlan.Resources.Resources[tfPlan.loopControl.curItemIndex] = map[string]map[string]gjson.Result{}
 		}
 		tfPlan.Resources.Resources[tfPlan.loopControl.curItemIndex][tfPlan.loopControl.curItemSubKey] = map[string]gjson.Result{}
-		value.ForEach(tfPlan.Transform)
+		value.ForEach(tfPlan.transform)
 	case "address":
 		// We are only interested in addresses of resources
 		if tfPlan.loopControl.prevItemIndex != "resources" {
@@ -135,8 +133,7 @@ func (tfPlan *Plan) Transform(key, value gjson.Result) bool {
 	return true
 }
 
-// NewCompDiffItem abstracts to append a new item to the slice of diffs.
-func (rs *ResourceSet) NewCompDiffItem(key, want, got string) {
+func (rs *ResourceSet) newCompDiffItem(key, want, got string) {
 	item := compDiffItem{
 		got:  got,
 		key:  key,
@@ -149,34 +146,34 @@ func (rs *ResourceSet) NewCompDiffItem(key, want, got string) {
 func (rs *ResourceSet) Contains(r Resource) bool {
 	metadata, ok := rs.Resources[r.Address]["Metadata"]
 	if !ok {
-		rs.NewCompDiffItem(r.Address, "exist", "nil")
+		rs.newCompDiffItem(r.Address, "exist", "nil")
 		return false
 	}
 	for k, v := range r.Metadata {
 		valueFound, ok := metadata[k]
 		if !ok {
-			rs.NewCompDiffItem(k, "exist", "nil")
+			rs.newCompDiffItem(k, "exist", "nil")
 			return false
 		}
 		if valueFound.String() != v {
-			rs.NewCompDiffItem(k, v, valueFound.String())
+			rs.newCompDiffItem(k, v, valueFound.String())
 			return false
 		}
 	}
 
 	values, ok := rs.Resources[r.Address]["Values"]
 	if !ok {
-		rs.NewCompDiffItem(r.Address, "exist", "nil")
+		rs.newCompDiffItem(r.Address, "exist", "nil")
 		return false
 	}
 	for k, v := range r.Values {
 		valueFound, ok := values[k]
 		if !ok {
-			rs.NewCompDiffItem(k, "exist", "nil")
+			rs.newCompDiffItem(k, "exist", "nil")
 			return false
 		}
 		if valueFound.String() != v {
-			rs.NewCompDiffItem(k, v, valueFound.String())
+			rs.newCompDiffItem(k, v, valueFound.String())
 			return false
 		}
 	}
@@ -190,18 +187,18 @@ func Equal(resources []Resource, rs *ResourceSet) bool {
 		resourcesRS[r.Address] = struct{}{}
 		rsItem, ok := rs.Resources[r.Address]
 		if !ok {
-			rs.NewCompDiffItem(r.Address, "exist in plan", "nil")
+			rs.newCompDiffItem(r.Address, "exist in plan", "nil")
 			return false
 		}
 
 		for k, v := range r.Metadata {
 			valueFound, ok := rsItem["Metadata"][k]
 			if !ok {
-				rs.NewCompDiffItem(r.Address, "exist in plan", "nil")
+				rs.newCompDiffItem(r.Address, "exist in plan", "nil")
 				return false
 			}
 			if valueFound.String() != v {
-				rs.NewCompDiffItem(k, v, valueFound.String())
+				rs.newCompDiffItem(k, v, valueFound.String())
 				return false
 			}
 		}
@@ -209,11 +206,11 @@ func Equal(resources []Resource, rs *ResourceSet) bool {
 		for k, v := range r.Values {
 			valueFound, ok := rsItem["Values"][k]
 			if !ok {
-				rs.NewCompDiffItem(r.Address, "exist in plan", "nil")
+				rs.newCompDiffItem(r.Address, "exist in plan", "nil")
 				return false
 			}
 			if valueFound.String() != v {
-				rs.NewCompDiffItem(k, v, valueFound.String())
+				rs.newCompDiffItem(k, v, valueFound.String())
 				return false
 			}
 		}
@@ -222,7 +219,7 @@ func Equal(resources []Resource, rs *ResourceSet) bool {
 	for k := range rs.Resources {
 		_, ok := resourcesRS[k]
 		if !ok {
-			rs.NewCompDiffItem(k, "exist in resources", "nil")
+			rs.newCompDiffItem(k, "exist in resources", "nil")
 			return false
 		}
 	}
