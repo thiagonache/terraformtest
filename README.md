@@ -94,6 +94,7 @@ func TestContainsResource(t *testing.T) {
     if len(items) != wantNumResources {
         t.Errorf("want %d resources in plan, got %d", wantNumResources, len(items))
     }
+}
 ```
 
 ### Test if plan is equal (have all the resources wanted)
@@ -127,4 +128,5 @@ func TestEqual(t *testing.T) {
     if !terraformtest.Equal(wantRS, &gotRS) {
         t.Error(gotRS.Diff())
     }
+}
 ```

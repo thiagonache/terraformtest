@@ -17,8 +17,8 @@ func TestReadPlanFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if wantLen != len(p.PlanData) {
-		t.Errorf("want json size in bytes of %d but got %d", wantLen, len(p.PlanData))
+	if wantLen != len(p.Data) {
+		t.Errorf("want json size in bytes of %d but got %d", wantLen, len(p.Data))
 	}
 }
 
