@@ -22,7 +22,31 @@ Terraformtest is a lightweight terraform tester written in Go for unit and integ
 - Test if a wanted resource exist in a plan.
 - Test if all wanted resources exist in a plan and vice-versa.
 
+### Motivation
+
+![Martin's Folwer Pyramid
+Tests](https://3fxtqy18kygf3on3bu39kh93-wpengine.netdna-ssl.com/wp-content/uploads/2020/01/test-automation-pyramid.jpg)
+
+- The most unit tests the better so they must be fast.
+
+- Should be simple to write tests so the writer doesn't need to be an expert on Go
+  or Terraform.
+
 ## Testing your plan
+
+### Generate Terraform plan in JSON format
+
+1. Run plan with plan in binary
+
+   ```shell
+   terraform plan -out /tmp/mymodule.plan
+   ```
+
+1. Convert binary plan into JSON file.
+
+   ```shell
+   terraform show -json /tmp/mymodule.plan > /any/path/i/want/mymodule.plan.json
+   ```
 
 ### Test if plan contains one or more resources
 
