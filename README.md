@@ -2,6 +2,7 @@
 
 ![Go](https://github.com/thiagonache/terraformtest/workflows/Go/badge.svg?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/thiagonache/terraformtest)](https://goreportcard.com/report/github.com/thiagonache/terraformtest)
+[![Go Reference](https://pkg.go.dev/badge/github.com/thiagonache/terraformtest.svg)](https://pkg.go.dev/github.com/thiagonache/terraformtest)
 
 ## Import
 
