@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/tidwall/gjson"
 )
@@ -38,7 +39,7 @@ type Resource struct {
 
 // ResourceSet stores the resources (items) and diff of the plan file.
 type ResourceSet struct {
-	Resources map[string]map[string]map[string]gjson.Result
+	Resources map[string]map[string]map[string]string
 	CompDiff  compDiff
 }
 
@@ -48,7 +49,7 @@ func ReadPlan(planPath string) (*Plan, error) {
 	tf := &Plan{
 		loopControl: loopControl{maxDepth: 10},
 		Resources: ResourceSet{
-			Resources: map[string]map[string]map[string]gjson.Result{},
+			Resources: map[string]map[string]map[string]string{},
 			CompDiff:  compDiff{},
 		},
 	}
@@ -109,9 +110,9 @@ func (tfPlan *Plan) transform(key, value gjson.Result) bool {
 		tfPlan.loopControl.curItemSubKey = "Values"
 		_, ok := tfPlan.Resources.Resources[tfPlan.loopControl.curItemIndex]
 		if !ok {
-			tfPlan.Resources.Resources[tfPlan.loopControl.curItemIndex] = map[string]map[string]gjson.Result{}
+			tfPlan.Resources.Resources[tfPlan.loopControl.curItemIndex] = map[string]map[string]string{}
 		}
-		tfPlan.Resources.Resources[tfPlan.loopControl.curItemIndex][tfPlan.loopControl.curItemSubKey] = map[string]gjson.Result{}
+		tfPlan.Resources.Resources[tfPlan.loopControl.curItemIndex][tfPlan.loopControl.curItemSubKey] = map[string]string{}
 		value.ForEach(tfPlan.transform)
 	case "address":
 		// We are only interested in addresses of resources
@@ -122,15 +123,22 @@ func (tfPlan *Plan) transform(key, value gjson.Result) bool {
 		tfPlan.loopControl.curItemIndex = value.String()
 		_, ok := tfPlan.Resources.Resources[tfPlan.loopControl.curItemIndex]
 		if !ok {
-			tfPlan.Resources.Resources[tfPlan.loopControl.curItemIndex] = map[string]map[string]gjson.Result{}
+			tfPlan.Resources.Resources[tfPlan.loopControl.curItemIndex] = map[string]map[string]string{}
 		}
-		tfPlan.Resources.Resources[tfPlan.loopControl.curItemIndex][tfPlan.loopControl.curItemSubKey] = map[string]gjson.Result{}
+		tfPlan.Resources.Resources[tfPlan.loopControl.curItemIndex][tfPlan.loopControl.curItemSubKey] = map[string]string{}
 
 	default:
+		value := normalizeItem(value.String())
 		tfPlan.Resources.Resources[tfPlan.loopControl.curItemIndex][tfPlan.loopControl.curItemSubKey][key.String()] = value
 	}
 
 	return true
+}
+
+func normalizeItem(item string) string {
+	item = strings.ReplaceAll(item, "\n", "")
+	item = strings.ReplaceAll(item, " ", "")
+	return item
 }
 
 func (rs *ResourceSet) newCompDiffItem(key, want, got string) {
@@ -155,8 +163,9 @@ func (rs *ResourceSet) Contains(r Resource) bool {
 			rs.newCompDiffItem(k, "exist", "nil")
 			return false
 		}
-		if valueFound.String() != v {
-			rs.newCompDiffItem(k, v, valueFound.String())
+		v = normalizeItem(v)
+		if valueFound != v {
+			rs.newCompDiffItem(k, v, valueFound)
 			return false
 		}
 	}
@@ -172,8 +181,9 @@ func (rs *ResourceSet) Contains(r Resource) bool {
 			rs.newCompDiffItem(k, "exist", "nil")
 			return false
 		}
-		if valueFound.String() != v {
-			rs.newCompDiffItem(k, v, valueFound.String())
+		v = normalizeItem(v)
+		if valueFound != v {
+			rs.newCompDiffItem(k, v, valueFound)
 			return false
 		}
 	}
@@ -197,8 +207,9 @@ func Equal(resources []Resource, rs *ResourceSet) bool {
 				rs.newCompDiffItem(r.Address, "exist in plan", "nil")
 				return false
 			}
-			if valueFound.String() != v {
-				rs.newCompDiffItem(k, v, valueFound.String())
+			v = normalizeItem(v)
+			if valueFound != v {
+				rs.newCompDiffItem(k, v, valueFound)
 				return false
 			}
 		}
@@ -209,8 +220,9 @@ func Equal(resources []Resource, rs *ResourceSet) bool {
 				rs.newCompDiffItem(r.Address, "exist in plan", "nil")
 				return false
 			}
-			if valueFound.String() != v {
-				rs.newCompDiffItem(k, v, valueFound.String())
+			v = normalizeItem(v)
+			if valueFound != v {
+				rs.newCompDiffItem(k, v, valueFound)
 				return false
 			}
 		}

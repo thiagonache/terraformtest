@@ -188,3 +188,58 @@ func TestDiffExpected(t *testing.T) {
 		})
 	}
 }
+
+func TestEKSCluster(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		planPath string
+		want     Resource
+	}{
+		{
+			desc:     "EKS Cluster",
+			planPath: "./testdata/ekspoc.plan.json",
+			want: Resource{
+				Address: "module.eks.aws_eks_cluster.this[0]",
+				Metadata: map[string]string{
+					"type":  "aws_eks_cluster",
+					"name":  "this",
+					"index": "0",
+				},
+				Values: map[string]string{
+					"name": "argocd-playground",
+					"encryption_config": `[
+                        { "provider": [{}], "resources": ["secrets"] }
+                    ]`,
+				},
+			},
+		},
+		{
+			desc:     "EKS Workers ASG",
+			planPath: "./testdata/ekspoc.plan.json",
+			want: Resource{
+				Address: "module.eks.aws_autoscaling_group.workers[0]",
+				Metadata: map[string]string{
+					"type":  "aws_autoscaling_group",
+					"name":  "workers",
+					"index": "0",
+				},
+				Values: map[string]string{
+					"health_check_grace_period": "300",
+					"min_size":                  "3",
+				},
+			},
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			tfPlan, err := ReadPlan(tC.planPath)
+			if err != nil {
+				t.Fatalf("%v", err)
+			}
+			gotRS := tfPlan.Resources
+			if !gotRS.Contains(tC.want) {
+				t.Error(gotRS.Diff())
+			}
+		})
+	}
+}
