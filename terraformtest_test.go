@@ -213,22 +213,6 @@ func TestEKSCluster(t *testing.T) {
 				},
 			},
 		},
-		{
-			desc:     "EKS Workers ASG",
-			planPath: "./testdata/ekspoc.plan.json",
-			want: Resource{
-				Address: "module.eks.aws_autoscaling_group.workers[0]",
-				Metadata: map[string]string{
-					"type":  "aws_autoscaling_group",
-					"name":  "workers",
-					"index": "0",
-				},
-				Values: map[string]string{
-					"health_check_grace_period": "300",
-					"min_size":                  "3",
-				},
-			},
-		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
