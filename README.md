@@ -28,6 +28,10 @@ Terraformtest is a lightweight terraform tester written in Go for unit and integ
 ![Martin's Folwer Pyramid
 Tests](https://3fxtqy18kygf3on3bu39kh93-wpengine.netdna-ssl.com/wp-content/uploads/2020/01/test-automation-pyramid.jpg)
 
+- We want to test the logic of our code without having to deploy resources.
+
+- We want to ensure behavior by testing resource values.
+
 - The most unit tests the better so they must be fast.
 
 - Should be simple to write tests so the writer doesn't need to be an expert on Go
